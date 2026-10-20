@@ -571,7 +571,11 @@ body {
 /* Only the instance carrying the 1920 annotation reserves room for it.
    On .player it left Section 4, which has no annotation, with 104px of
    dead space between its timeline and its dropdowns. */
-#player { margin-bottom: 6.5rem; }
+/* Room for the 1920 annotation hanging below the track. Trimmed from
+   6.5rem: it left 63px of slack between the note and the grid, and
+   Section 2 is the one section whose content ran past the fold of a
+   1280x800 laptop once the sticky height gate was removed. */
+#player { margin-bottom: 4rem; }
 
 .player__step {
   display: inline-flex;
@@ -987,19 +991,16 @@ body {
    gets a negative offset and settles bottom-aligned instead of pinning
    its top and hiding its own tail. No z-index: both are positioned with
    auto, so source order already paints each over the last. */
-/* Gated on viewport size: while pinned, a section taller than the screen
-   would have its lower half covered by the next card before the reader
-   could reach it. Below this, sections simply scroll. */
-/* The gate must exceed the TALLEST section, measured at 813px. In a
-   stacking layout the incoming card covers the outgoing one from the
-   bottom up, so a section taller than the viewport always has its tail
-   covered before a reader reaches it — and bottom-pinning makes that
-   worse, not better, because then the tail is covered first. There is no
-   CSS arrangement that rescues it: the effect only works when a section
-   fits. 52rem is 832px; below that, sections simply scroll.
-   If the effect is wanted on shorter laptops, the sections have to get
-   shorter — that is a design decision, not a CSS one. */
-@media (min-width: 48rem) and (min-height: 52rem) {
+/* Width-gated only. There was a height gate too — 52rem, chosen to
+   exceed the tallest section — because in a stacking layout the incoming
+   card covers the outgoing one from the bottom up, so a section taller
+   than the viewport loses its tail. That gate switched the effect off
+   entirely on a 1280x800 laptop, which is a common screen, so the
+   sections were shortened instead: every one now ends its INK inside
+   713px, the viewport such a laptop leaves. A test holds that line.
+   The 4rem of bottom padding below the ink is covered and costs nothing.
+   ANY SECTION THAT GROWS PAST 713px OF INK LOSES CONTENT HERE. */
+@media (min-width: 700px) {
   .section {
     position: sticky;
     top: 0;
@@ -1013,7 +1014,7 @@ body {
    height and nothing pins, which is the mobile behaviour.
    The closing is excluded deliberately — it is one sentence and a source
    link, and a full screen of it is a full screen of nothing. */
-@media (min-width: 48rem) {
+@media (min-width: 700px) {
   .section:not(.section--closing) { min-height: 100vh; }
 }
 

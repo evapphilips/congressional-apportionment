@@ -2152,9 +2152,21 @@
     document.getElementById('sandbox').appendChild(bare);
     var plain = parseFloat(getComputedStyle(bare).marginBottom);
     bare.remove();
-    assert(annotated > plain + 40,
-      'Section 2 should clear its annotation: ' + annotated + ' vs ' + plain);
-    assert(plain < 60, 'an unannotated timeline should reserve nothing, got ' + plain);
+    // Tie the reserve to the thing it reserves for, rather than to a
+    // round number: the note hangs below the player's own box, and the
+    // margin has to clear that overhang. The old assertion was a fixed
+    // 40px gap that happened to hold at 6.5rem and stopped meaning
+    // anything when the reserve was trimmed to fit a laptop fold.
+    var playerBox = document.getElementById('player').getBoundingClientRect();
+    var noteBox = document.querySelector('.player__mark-note').getBoundingClientRect();
+    var overhang = noteBox.bottom - playerBox.bottom;
+    assert(overhang > 0, 'the note should hang below the track, got ' + overhang);
+    assert(annotated >= overhang,
+      'the reserve is ' + annotated + 'px for a note hanging ' +
+      Math.round(overhang) + 'px below the track');
+    assert(plain < overhang,
+      'an unannotated timeline should not reserve the annotation\'s room, ' +
+      'got ' + plain);
   });
 
   // --- Styling pass: copy ---
@@ -2224,23 +2236,44 @@
 
   // --- Styling pass: layout ---
 
+  // How far down a section its last visible pixel sits. Dropping the
+  // 100vh floor first, so the measurement is of content and not of the
+  // room the floor reserves.
+  function lowestInk(section) {
+    var floor = section.style.minHeight;
+    section.style.minHeight = '0';
+    var top = section.getBoundingClientRect().top;
+    var low = 0;
+    section.querySelectorAll('*').forEach(function (el) {
+      var box = el.getBoundingClientRect();
+      if (!box.height || !box.width) return;
+      var styles = getComputedStyle(el);
+      if (styles.visibility === 'hidden' || styles.display === 'none') return;
+      if (styles.opacity === '0') return;
+      if (box.bottom - top > low) low = box.bottom - top;
+    });
+    section.style.minHeight = floor;
+    return low;
+  }
+
   test('whole sections stack; the headline no longer pins on its own', function () {
     ['section-1', 'section-2', 'section-3', 'section-4'].forEach(function (id) {
       var section = document.getElementById(id);
       var styles = getComputedStyle(section);
       assertEqual(styles.position, 'sticky', id + ' should pin as a whole');
       assertEqual(styles.top, '0px', id + ' pins its top');
-      // Sections now floor at 100vh, so the rendered box is the viewport's
-      // height and says nothing about whether the CONTENT fits. The gate
-      // (min-height: 52rem) was chosen to exceed the tallest section's
-      // content; measure that by dropping the floor, not the painted box.
-      var floor = section.style.minHeight;
-      section.style.minHeight = '0';
-      var content = section.getBoundingClientRect().height;
-      section.style.minHeight = floor;
-      assert(content <= 832,
-        id + ' holds more content than the sticky gate admits: ' +
-        Math.round(content) + 'px against an 832px gate');
+      // Measure the INK, not the box. The box carries 4rem of bottom
+      // padding that the next card covers harmlessly; what must not be
+      // covered is the last thing a reader can actually see.
+      //
+      // The budget is 713px: the viewport of a 1280x800 laptop once
+      // browser chrome is taken. There is no height gate any more —
+      // stacking runs at every desktop width — so a section whose INK
+      // runs past the window has it covered by the next card with
+      // nothing to stop it. 713 is the smallest screen this holds.
+      assert(lowestInk(section) <= 713,
+        id + ' puts content below the fold of a 1280x800 laptop: ink ends ' +
+        Math.round(lowestInk(section)) + 'px down, viewport is 713px');
       // The divider has no controls, so it has no pinned wrapper either.
       var inner = document.querySelector('#' + id + ' .section__pinned');
       if (inner) {
@@ -2249,6 +2282,10 @@
       }
     });
   });
+
+  // index.html's <title> cannot be asserted here: this harness is its own
+  // document and carries its own title. Verified with tools/drive.mjs,
+  // like the slider's focus ring.
 
   // --- General pass ---
 
