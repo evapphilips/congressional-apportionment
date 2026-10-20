@@ -1,0 +1,6 @@
+.DS_Store
+.superpowers/
+
+# Process notes, not the piece.
+docs/superpowers/
+HANDOFF.md

@@ -1,0 +1,2738 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>DotGrid tests</title>
+<!-- The real stylesheet, so getComputedStyle sees the design tokens and
+     .cluster is a real grid. Without it singleStageHeight() reads "" for
+     every token and the offset measurement would read zeros. Linked
+     first so the harness rules below still win. -->
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  body { font: 14px/1.6 ui-monospace, monospace; padding: 2rem; }
+  li.pass::marker { content: "PASS "; color: #0a7; }
+  li.fail::marker { content: "FAIL "; color: #d33; }
+  li.fail { color: #d33; }
+  /* Off-screen but fully laid out, visible and focusable. display:none
+     would zero every getBoundingClientRect, breaking the offset
+     measurement the fan-out depends on; visibility:hidden would make the
+     toggle unfocusable, so the focus-retention test could not run. */
+  /* The harness prints its results in monospace, but that rule is on
+     <body> and the sandbox inherits it — so every line-break and column
+     assertion was measuring Georgia copy rendered in ui-monospace at
+     14px. Restate index.html's body font on the sandbox so what is
+     measured is what ships. */
+  #sandbox {
+    font: 1rem/1.6 Georgia, "Iowan Old Style", "Times New Roman", serif;
+    color: var(--ink);
+  }
+  #sandbox .cover { min-height: 0; }
+  #sandbox {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    /* A definite width, so max-width and auto margins actually bind.
+       Shrink-to-fit let column-alignment assertions pass on a layout the
+       real page never has. */
+    width: 1200px;
+  }
+</style>
+<h1>DotGrid tests</h1>
+<ol id="results"></ol>
+
+<div id="sandbox">
+  <!-- Task 2 constructs tab strips in here, outside the real section. -->
+  <div id="tabs-sandbox"></div>
+
+  <!-- Mirrors index.html's cover. Height-neutralised below: the real one
+       floors at 100vh, which here would only push every section down the
+       sandbox without telling us anything the section tests do not. -->
+  <header class="cover">
+    <div class="cover__inner">
+      <h1 class="cover__headline">435 seats.<br>331 million people.</h1>
+      <p class="cover__sub">
+        The House of Representatives has had 435 seats since 1920, when the
+        country held 106 million people. It holds 331 million now.
+        <span class="cover__lead">Let's explore how representation has changed in the last 100+ years.</span>
+        <span class="visually-hidden">Throughout, one dot stands for 10,000 people.</span>
+      </p>
+    </div>
+    <p class="cover__scroll" aria-hidden="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <polyline points="6 9 12 16 18 9"></polyline>
+      </svg>
+    </p>
+  </header>
+
+  <!-- Mirrors index.html's #section-1 exactly, including child order, so
+       the wiring and the layout order are both exercised for real. -->
+  <main>
+  <section class="section" id="section-1" aria-labelledby="section-1-heading">
+    <h2 class="visually-hidden" id="section-1-heading">One representative</h2>
+    <div class="section__pinned">
+
+    <p class="headline" id="headline">
+      Today,
+      <label class="visually-hidden" for="state-select">Choose a state</label>
+      <select id="state-select" class="state-select"></select>
+      <span id="headline-rest"></span>
+    </p>
+    <div class="viewtoggle" id="view-toggle" role="group" aria-label="Grid view"></div>
+    </div>
+
+<div class="single-figure">
+      <div class="grid-stage grid-stage--single" id="grid-stage"></div>
+      <p class="note single-gain" id="single-gain"></p>
+    </div>
+    <p class="visually-hidden" id="live-region" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="section" id="section-2" aria-labelledby="section-2-heading">
+    <h2 class="visually-hidden" id="section-2-heading">Change over time</h2>
+    <div class="section__pinned">
+
+
+    <p class="headline" id="timeline-headline"><span id="timeline-before"></span><label class="visually-hidden" for="timeline-state">Choose a state for the timeline</label><select id="timeline-state" class="state-select"></select><span id="timeline-rest"></span></p>
+
+    <div class="player" id="player">
+      <button type="button" class="player__step" id="year-prev" data-yearpicker="prev" aria-label="Previous census">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <polyline points="15 5 8 12 15 19"></polyline>
+        </svg>
+      </button>
+      <div class="player__track">
+        <label class="visually-hidden" for="year-slider">Census year</label>
+        <!-- value is the index of the store's opening year (1920), not a
+             year. YearPicker corrects it on first render; the literal is
+             what shows until then. -->
+        <input type="range" id="year-slider" data-yearpicker="slider" min="0" max="11" step="1" value="1">
+        <div class="player__ends" aria-hidden="true"><span>1910</span><span>2020</span></div>
+        <div class="player__mark" id="year-mark">
+          <svg class="player__mark-line" viewBox="0 0 48 56" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+            <path d="M1 0 C1 30, 1 38, 34 44" />
+          </svg>
+          <span class="player__mark-note">Number of representatives was fixed to 435 starting in 1920.</span>
+        </div>
+      </div>
+      <button type="button" class="player__step" id="year-next" data-yearpicker="next" aria-label="Next census">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <polyline points="9 5 16 12 9 19"></polyline>
+        </svg>
+      </button>
+    </div>
+    </div>
+
+<div class="timeline-figure">
+      <div class="grid-stage timeline-stage" id="timeline-stage"></div>
+      <p class="note timeline-gap" id="timeline-gap"></p>
+    </div>
+
+    <p class="visually-hidden" id="timeline-live" role="status" aria-live="polite"></p>
+  </section>
+  <section class="section section--divider" id="section-3" aria-labelledby="section-3-heading">
+    <h2 class="visually-hidden" id="section-3-heading">Why the gap widens</h2>
+
+    <div class="divider__inner">
+      <p class="headline divider__lead">
+        Since the total number of House seats was fixed in <strong>1920</strong>,
+        representation has grown uneven. The widest gaps are between states of
+        nearly the same size.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="section-4" aria-labelledby="section-4-heading">
+    <h2 class="visually-hidden" id="section-4-heading">Compare two states</h2>
+    <div class="section__pinned">
+      <p class="section__lead" id="compare-lead">Where the gap is widest</p>
+      <div class="comparetabs" id="compare-tabs"></div>
+      <p class="headline" id="compare-headline"></p>
+    </div>
+
+    <div class="compare" id="compare-panel">
+      <div class="compare__side">
+        <p class="compare__head" id="compare-head-a"></p>
+        <p class="compare__controls" id="compare-controls-a" hidden>
+          <label class="visually-hidden" for="compare-state-a">First state</label>
+          <select id="compare-state-a" class="state-select"></select>
+          <label class="visually-hidden" for="compare-year-a">First year</label>
+          <select id="compare-year-a" class="state-select"></select>
+        </p>
+        <p class="note compare__count" id="compare-count-a"></p>
+        <div class="compare__figure">
+          <div class="grid-stage timeline-stage" id="compare-grid-a"></div>
+          <p class="note compare__gap" id="compare-gap-a"></p>
+        </div>
+      </div>
+
+      <div class="compare__side">
+        <p class="compare__head" id="compare-head-b"></p>
+        <p class="compare__controls" id="compare-controls-b" hidden>
+          <label class="visually-hidden" for="compare-state-b">Second state</label>
+          <select id="compare-state-b" class="state-select"></select>
+          <label class="visually-hidden" for="compare-year-b">Second year</label>
+          <select id="compare-year-b" class="state-select"></select>
+        </p>
+        <p class="note compare__count" id="compare-count-b"></p>
+        <div class="compare__figure">
+          <div class="grid-stage timeline-stage" id="compare-grid-b"></div>
+          <p class="note compare__gap" id="compare-gap-b"></p>
+        </div>
+      </div>
+    </div>
+
+    <p class="visually-hidden" id="compare-live" role="status" aria-live="polite"></p>
+  </section>
+  </main>
+
+<footer class="closing-footer">
+  <section class="section section--closing" id="section-5" aria-labelledby="section-5-heading">
+    <h2 class="visually-hidden" id="section-5-heading">Closing</h2>
+
+    <p class="note">
+      Data: <a href="https://www.census.gov/data/tables/time-series/dec/apportionment-data-text.html">U.S.
+      Census Bureau, Congressional Apportionment</a>. Figures for people per
+      representative use apportionment population, which differs slightly
+      from resident population.
+    </p>
+  </section>
+</footer>
+
+<!-- Fixed, because the unit is the contract every section depends on and
+     the reader needs it wherever they are, not only on the cover. -->
+<aside class="key" id="key" aria-label="Scale">
+  <div class="key__swatch" id="key-swatch" aria-hidden="true"></div>
+  <p class="key__label">= 10,000 people</p>
+</aside>
+  <div id="grid-sandbox"></div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/dotgrid.js"></script>
+<script src="../js/format.js"></script>
+<script src="../js/records.js"></script>
+<script src="../js/store.js"></script>
+<script src="../js/yearpicker.js"></script>
+<script src="../js/section1.js"></script>
+<script src="../js/section2.js"></script>
+<script src="../js/comparetabs.js"></script>
+<script src="../js/section4.js"></script>
+<script src="../js/app.js"></script>
+<script>
+  var results = document.getElementById('results');
+  var sandbox = document.getElementById('grid-sandbox');
+  var failures = 0;
+
+  // Tests are registered, then run in order. A test may return a promise,
+  // which is awaited — needed for anything that waits on a frame.
+  var queue = [];
+
+  function test(name, fn) {
+    queue.push({ name: name, fn: fn });
+  }
+
+  function nextFrame() {
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+    });
+  }
+
+  async function runQueue() {
+    for (var i = 0; i < queue.length; i++) {
+      var item = document.createElement('li');
+      try {
+        await queue[i].fn();
+        item.className = 'pass';
+        item.textContent = queue[i].name;
+      } catch (error) {
+        failures++;
+        item.className = 'fail';
+        item.textContent = queue[i].name + ' — ' + error.message;
+      }
+      results.appendChild(item);
+    }
+
+    var summary = document.createElement('p');
+    summary.textContent = failures === 0
+      ? 'All ' + results.children.length + ' tests passed.'
+      : failures + ' of ' + results.children.length + ' tests FAILED.';
+    summary.style.fontWeight = 'bold';
+    summary.style.color = failures === 0 ? '#0a7' : '#d33';
+    document.body.appendChild(summary);
+  }
+
+  function assert(condition, message) {
+    if (!condition) throw new Error(message || 'assertion failed');
+  }
+
+  function assertEqual(actual, expected, label) {
+    if (actual !== expected) {
+      throw new Error((label || 'value') + ': got ' + actual + ', expected ' + expected);
+    }
+  }
+
+  var DotGrid = window.Apportionment.DotGrid;
+
+  // Everything runs on DOMContentLoaded. From Task 4 onward app.js
+  // registers its own listener first, so the page has initialised by the
+  // time these assertions run.
+  function runTests() {
+
+  test('splits a fractional dot value', function () {
+    var result = DotGrid.split(77.7529);
+    assertEqual(result.whole, 77, 'whole');
+    assert(Math.abs(result.fraction - 0.7529) < 1e-9, 'fraction: got ' + result.fraction);
+  });
+
+  test('splits a whole dot value with no fraction', function () {
+    var result = DotGrid.split(10);
+    assertEqual(result.whole, 10, 'whole');
+    assertEqual(result.fraction, 0, 'fraction');
+  });
+
+  test('rejects a negative dot value', function () {
+    var threw = false;
+    try { DotGrid.split(-1); } catch (error) { threw = error instanceof RangeError; }
+    assert(threw, 'expected a RangeError');
+  });
+
+  test('renders one cluster with a partial dot', function () {
+    DotGrid.render(sandbox, { clusters: 1, dotsPerCluster: 77, fraction: 0.75 });
+    assertEqual(sandbox.querySelectorAll('.cluster').length, 1, 'clusters');
+    assertEqual(sandbox.querySelectorAll('.dot').length, 78, 'dot elements');
+    assertEqual(sandbox.querySelectorAll('.dot--partial').length, 1, 'partial dots');
+  });
+
+  test('omits the partial dot when the fraction is zero', function () {
+    DotGrid.render(sandbox, { clusters: 1, dotsPerCluster: 58, fraction: 0 });
+    assertEqual(sandbox.querySelectorAll('.dot').length, 58, 'dot elements');
+    assertEqual(sandbox.querySelectorAll('.dot--partial').length, 0, 'partial dots');
+  });
+
+  test('renders every cluster for New York', function () {
+    DotGrid.render(sandbox, { clusters: 26, dotsPerCluster: 77, fraction: 0.7529 });
+    assertEqual(sandbox.querySelectorAll('.cluster').length, 26, 'clusters');
+    assertEqual(sandbox.querySelectorAll('.dot').length, 26 * 78, 'dot elements');
+  });
+
+  test('replaces previous content instead of appending', function () {
+    DotGrid.render(sandbox, { clusters: 52, dotsPerCluster: 76, fraction: 0.1 });
+    DotGrid.render(sandbox, { clusters: 1, dotsPerCluster: 5, fraction: 0 });
+    assertEqual(sandbox.querySelectorAll('.cluster').length, 1, 'clusters');
+    assertEqual(sandbox.querySelectorAll('.dot').length, 5, 'dot elements');
+  });
+
+  test('handles a cluster with no whole dots', function () {
+    DotGrid.render(sandbox, { clusters: 1, dotsPerCluster: 0, fraction: 0.4 });
+    assertEqual(sandbox.querySelectorAll('.dot').length, 1, 'dot elements');
+  });
+
+  test('rejects a cluster count below one', function () {
+    var threw = false;
+    try {
+      DotGrid.render(sandbox, { clusters: 0, dotsPerCluster: 5, fraction: 0 });
+    } catch (error) { threw = error instanceof RangeError; }
+    assert(threw, 'expected a RangeError');
+  });
+
+  test('tags each cluster with its index for staggered animation', function () {
+    DotGrid.render(sandbox, { clusters: 3, dotsPerCluster: 2, fraction: 0 });
+    var clusters = sandbox.querySelectorAll('.cluster');
+    assertEqual(clusters[0].style.getPropertyValue('--i'), '0', 'first index');
+    assertEqual(clusters[2].style.getPropertyValue('--i'), '2', 'third index');
+  });
+
+  // --- Task 4: Section 1 state selection and headline ---
+
+  var app = window.Apportionment.app;
+
+  test('composes a plural headline', function () {
+    var text = app.headlineFor({ name: 'New York', reps: 26, popPerRep: 777529 });
+    assert(text.indexOf('has 26 representatives') !== -1, 'got: ' + text);
+    assert(text.indexOf('777,529 people per representative') !== -1, 'got: ' + text);
+  });
+
+  test('composes a singular headline for one-representative states', function () {
+    ['Alaska', 'Delaware', 'North Dakota', 'South Dakota', 'Vermont', 'Wyoming']
+      .forEach(function (name) {
+        var record = window.Apportionment.data.states[name].slice(-1)[0];
+        assertEqual(record.reps, 1, name + ' reps');
+        var text = app.headlineFor({
+          name: name, reps: record.reps, popPerRep: record.popPerRep
+        });
+        assert(text.indexOf('has 1 representative.') !== -1,
+          name + ' should read "has 1 representative." — got: ' + text);
+        assert(text.indexOf('representatives') === -1,
+          name + ' should not say "representatives" — got: ' + text);
+      });
+  });
+
+  test('formats large numbers with thousands separators', function () {
+    var text = app.headlineFor({ name: 'Wyoming', reps: 1, popPerRep: 577719 });
+    assert(text.indexOf('577,719') !== -1, 'got: ' + text);
+  });
+
+  test('rejects an unknown state', function () {
+    var threw = false;
+    try { app.select('Atlantis'); } catch (error) { threw = error instanceof RangeError; }
+    assert(threw, 'expected a RangeError');
+  });
+
+  test('every state resolves to at most 100 dots', function () {
+    var data = window.Apportionment.data;
+    data.stateNames.forEach(function (name) {
+      data.states[name].forEach(function (record) {
+        if (record.popPerRep === null) return;
+        var dots = record.popPerRep / data.peoplePerDot;
+        assert(dots <= 100, name + ' ' + record.year + ' needs ' + dots + ' dots');
+      });
+    });
+  });
+
+  // --- Task 5: fan out to every representative ---
+
+  // Every cluster stays in the DOM in both views; the collapsed view hides
+  // the siblings so they have somewhere to fan out from. What the reader
+  // sees is the visible count, so that is what these assert.
+  function clustersInDom() {
+    return document.querySelectorAll('#grid-stage .cluster').length;
+  }
+
+  function clustersVisible() {
+    return Array.prototype.filter.call(
+      document.querySelectorAll('#grid-stage .cluster'),
+      function (cluster) { return getComputedStyle(cluster).opacity !== '0'; }
+    ).length;
+  }
+
+  test('starts collapsed showing a single representative', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    assertEqual(app.expanded(), false, 'expanded');
+    assertEqual(clustersVisible(), 1, 'visible clusters');
+  });
+
+  test('keeps every cluster in the DOM while collapsed', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    // If this ever drops to 1, the fan-out has nothing to animate from.
+    assertEqual(clustersInDom(), 26, 'clusters in DOM');
+  });
+
+  test('expands to one cluster per representative', function () {
+    app.select('New York');
+    app.setExpanded(true);
+    assertEqual(app.expanded(), true, 'expanded');
+    assertEqual(clustersVisible(), 26, 'visible clusters');
+  });
+
+  test('keeps the view state when the state changes', function () {
+    app.select('New York');
+    app.setExpanded(true);
+    app.select('California');
+    assertEqual(app.expanded(), true, 'still expanded');
+    assertEqual(clustersVisible(), 52, 'visible clusters');
+  });
+
+  test('leaves no orphaned clusters when switching mid-transition', function () {
+    app.select('New York');
+    app.setExpanded(true);
+    app.select('Wyoming');           // switch without waiting for the transition
+    assertEqual(clustersInDom(), 1, 'clusters in DOM');
+    assertEqual(clustersVisible(), 1, 'visible clusters');
+    var text = document.getElementById('headline-rest').textContent;
+    assert(text.indexOf('1 representative.') !== -1, 'headline: ' + text);
+  });
+
+  test('collapsing returns to a single visible cluster', function () {
+    app.select('California');
+    app.setExpanded(true);
+    app.setExpanded(false);
+    assertEqual(clustersVisible(), 1, 'visible clusters');
+  });
+
+  test('keeps the dropdown in step with the selected state', function () {
+    // The dropdown supplies the state name inside the headline sentence, so
+    // if it drifts the sentence contradicts the numbers printed next to it.
+    app.select('California');
+    assertEqual(document.getElementById('state-select').value, 'California', 'select value');
+    app.select('Vermont');
+    assertEqual(document.getElementById('state-select').value, 'Vermont', 'select value');
+  });
+
+  test('labels the toggle "1 rep" and "All N reps"', function () {
+    app.select('New York');
+    assertEqual(document.getElementById('view-one').textContent, '1 rep', 'one label');
+    assertEqual(document.getElementById('view-all').textContent, 'All 26 reps', 'all label');
+    app.select('California');
+    assertEqual(document.getElementById('view-all').textContent, 'All 52 reps', 'all label');
+  });
+
+  test('toggle label agrees in number for a one-representative state', function () {
+    app.select('Wyoming');
+    assertEqual(document.getElementById('view-all').textContent, 'All 1 rep', 'all label');
+  });
+
+  test('marks the active view on the toggle', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    assertEqual(document.getElementById('view-one').getAttribute('aria-pressed'), 'true', 'one');
+    assertEqual(document.getElementById('view-all').getAttribute('aria-pressed'), 'false', 'all');
+    app.setExpanded(true);
+    assertEqual(document.getElementById('view-one').getAttribute('aria-pressed'), 'false', 'one');
+    assertEqual(document.getElementById('view-all').getAttribute('aria-pressed'), 'true', 'all');
+  });
+
+  // --- Review fixes ---
+
+  test('renders a one-representative state at full scale', function () {
+    // Its toggle is disabled, so the large view must be what renders —
+    // otherwise the reader is stranded on a quarter-size grid with no
+    // control to escape it.
+    app.select('New York');
+    app.setExpanded(true);
+    app.select('Wyoming');
+    var cluster = document.querySelector('#grid-stage .cluster');
+    assert(getComputedStyle(cluster).transform !== 'none',
+      'the single cluster should be scaled up, not left at natural size');
+    assertEqual(clustersVisible(), 1, 'visible clusters');
+  });
+
+  test('disables the toggle for a one-representative state', function () {
+    app.select('Wyoming');
+    assert(document.getElementById('view-one').disabled, 'one rep button disabled');
+    assert(document.getElementById('view-all').disabled, 'all reps button disabled');
+    app.select('New York');
+    assert(!document.getElementById('view-all').disabled, 're-enabled for 26 reps');
+  });
+
+  test('remembers the all-reps preference across a one-representative state', function () {
+    app.select('New York');
+    app.setExpanded(true);
+    app.select('Wyoming');        // nothing to expand; toggle greys out
+    app.select('California');     // preference should come back
+    assertEqual(app.expanded(), true, 'preference preserved');
+    assertEqual(clustersVisible(), 52, 'visible clusters');
+  });
+
+  test('bolds the representative count and the people figure', function () {
+    app.select('New York');
+    var strong = document.querySelectorAll('#headline-rest strong');
+    assertEqual(strong.length, 2, 'strong elements');
+    assertEqual(strong[0].textContent, '26', 'rep count');
+    assertEqual(strong[1].textContent, '777,529', 'people figure');
+  });
+
+  test('still reads as one sentence with the numbers bold', function () {
+    app.select('Wyoming');
+    assertEqual(document.getElementById('headline-rest').textContent,
+      " has 1 representative. That's 577,719 people per representative.",
+      'sentence');
+  });
+
+  test('orders the section headline, toggle, grid, then its gain note', function () {
+    // Document order, not child index: the headline and controls now sit
+    // inside a pinned wrapper, so they are no longer direct children.
+    // The "Based on the 2020 apportionment" note used to sit between the
+    // headline and the toggle; the gain note replaced it and belongs with
+    // the grid it describes, not with the controls.
+    var section = document.getElementById('section-1');
+    function follows(a, b) {
+      var first = section.querySelector(a);
+      var second = section.querySelector(b);
+      assert(first && second, 'missing ' + a + ' or ' + b);
+      return !!(first.compareDocumentPosition(second) &
+        Node.DOCUMENT_POSITION_FOLLOWING);
+    }
+    assert(follows('.headline', '#view-toggle'), 'toggle should follow the headline');
+    assert(follows('#view-toggle', '#grid-stage'), 'grid should follow the toggle');
+    assert(follows('#grid-stage', '#single-gain'), 'the gain note belongs with the grid');
+  });
+
+  // --- Section 1: the gain against 1920 ---
+
+  test('the apportionment footnote is gone', function () {
+    var section = document.getElementById('section-1');
+    assert(section.textContent.indexOf('Based on the 2020 apportionment') === -1,
+      'the "Based on..." note is still there');
+  });
+
+  test('the gain note counts from 1920, with the number bold', function () {
+    app.select('Delaware');
+    app.setExpanded(false);
+    var note = document.getElementById('single-gain');
+    // Delaware: 990,837 in 2020 against 223,003 in 1920.
+    assertEqual(note.querySelector('strong').textContent, '767,834',
+      'Delaware gain');
+    assert(note.textContent.indexOf('more people per representative') !== -1,
+      'gain phrasing, got: ' + note.textContent);
+    assert(note.textContent.indexOf('1920') !== -1,
+      'the note should name the year it counts from');
+    assert(!note.hidden, 'the note should show on the single view');
+  });
+
+  test('the gain note follows the state', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    assertEqual(document.getElementById('single-gain').querySelector('strong').textContent,
+      '536,120', 'New York gain');
+    app.select('Montana');
+    assertEqual(document.getElementById('single-gain').querySelector('strong').textContent,
+      '271,948', 'Montana gain');
+  });
+
+  test('the gain note belongs to the 1 rep view only', function () {
+    // It describes one representative's load. Fanned out, the grid is
+    // showing every representative and the sentence no longer matches
+    // what is on screen.
+    app.select('New York');
+    app.setExpanded(true);
+    var note = document.getElementById('single-gain');
+    assert(note.hidden, 'the note should be hidden when the grid fans out');
+    assertEqual(getComputedStyle(note).display, 'none',
+      'hidden must actually hide it');
+    app.setExpanded(false);
+    assert(!note.hidden, 'the note should come back on the single view');
+  });
+
+  test('a one-representative state keeps its gain note', function () {
+    // Its toggle is disabled and the single view is the one that renders,
+    // so there is no view in which the note should disappear.
+    app.select('Wyoming');
+    app.setExpanded(true);
+    var note = document.getElementById('single-gain');
+    assert(!note.hidden, 'Wyoming has no fanned-out view to hide it for');
+    assertEqual(note.querySelector('strong').textContent, '384,232',
+      'Wyoming gain');
+  });
+
+  test('a state with no 1920 row shows no note at all', function () {
+    // Alaska and Hawaii carry null popPerRep until 1960. There is no gain
+    // to state, and in JavaScript subtracting null yields a number, so the
+    // guard has to be explicit -- but the answer is silence, not a
+    // sentence explaining the silence.
+    ['Alaska', 'Hawaii'].forEach(function (name) {
+      app.select(name);
+      app.setExpanded(false);
+      var note = document.getElementById('single-gain');
+      assert(note.hidden, name + ' has no 1920 figure, so it should show nothing');
+      assertEqual(getComputedStyle(note).display, 'none',
+        name + ' note must actually be hidden');
+      assertEqual(note.textContent, '', name + ' should leave no stale copy behind');
+    });
+    app.select('New York');
+  });
+
+  test('a hidden note comes back when the state has a figure again', function () {
+    app.select('Alaska');
+    app.setExpanded(false);
+    assert(document.getElementById('single-gain').hidden, 'Alaska hidden');
+    app.select('Montana');
+    var note = document.getElementById('single-gain');
+    assert(!note.hidden, 'Montana should show its note again');
+    assertEqual(note.querySelector('strong').textContent, '271,948', 'Montana gain');
+  });
+
+  test('the note waits out the fan before arriving', function () {
+    // Coming back from the fanned-out view, 26 clusters are still flying
+    // inward. A sentence appearing under them mid-flight competes with
+    // the thing it describes.
+    app.select('New York');
+    app.setExpanded(false);
+    app.setExpanded(true);
+    app.setExpanded(false);
+    var note = document.getElementById('single-gain');
+    assert(note.classList.contains('single-gain--arriving'),
+      'the note should be marked as arriving after a fan-in');
+    // New York: 26 clusters, stagger capped at 10ms, so the last one
+    // starts 250ms in and runs the 600ms transform.
+    assertEqual(getComputedStyle(note).animationDelay, '0.85s',
+      'the delay should clear the whole fan');
+    var duration = parseFloat(getComputedStyle(note).animationDuration);
+    assert(duration > 0 && duration <= 0.35,
+      'the fade itself should be quick, got ' + duration + 's');
+  });
+
+  test('the fan delay follows the cluster count', function () {
+    // Montana fans two clusters, so it waits one stagger step past the
+    // transform; New York fans 26 and waits twenty-five.
+    app.select('Montana');
+    app.setExpanded(false);
+    app.setExpanded(true);
+    app.setExpanded(false);
+    assertEqual(getComputedStyle(document.getElementById('single-gain')).animationDelay,
+      '0.61s', 'two clusters: 600ms transform plus one 10ms step');
+  });
+
+  test('a state that cannot fan never stages an arrival', function () {
+    // Wyoming has one representative, so its toggle is disabled and the
+    // single view is the only one it has. Pressing the control changes
+    // nothing on screen, and the note must not flicker as though it had.
+    app.select('Wyoming');
+    app.setExpanded(false);
+    app.setExpanded(true);
+    app.setExpanded(false);
+    var note = document.getElementById('single-gain');
+    assert(!note.classList.contains('single-gain--arriving'),
+      'there was no fan to wait for');
+    assert(!note.hidden, 'and the note stays put throughout');
+  });
+
+  test('changing state inside the 1 rep view does not re-stage the note', function () {
+    // The grid is rebuilt with transitions suppressed, so there is no fan
+    // to wait for and no reason to hold the sentence back.
+    app.select('New York');
+    app.setExpanded(true);
+    app.setExpanded(false);
+    app.select('Montana');
+    assert(!document.getElementById('single-gain').classList.contains('single-gain--arriving'),
+      'a plain state change should not replay the arrival');
+  });
+
+  test('the gain note sits beside the dots, not under them', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    var stage = document.getElementById('grid-stage');
+    var note = document.getElementById('single-gain');
+    var cluster = stage.querySelector('.cluster');
+    var dots = cluster.getBoundingClientRect();
+    var box = note.getBoundingClientRect();
+    assert(box.left >= dots.right,
+      'the note starts at ' + Math.round(box.left) +
+      ', over dots ending at ' + Math.round(dots.right));
+    assert(box.top < dots.bottom,
+      'the note should sit alongside the dots, not below them');
+  });
+
+  test('relayout restores a stage height gone stale', function () {
+    // A viewport resize changes cluster wrapping and the dot-size tokens,
+    // but the stage height is an inline pixel value written once per render.
+    app.select('Delaware');
+    app.setExpanded(false);
+    var stage = document.getElementById('grid-stage');
+    var correct = stage.style.height;
+    stage.style.height = '10px';
+    app.relayout();
+    assertEqual(stage.style.height, correct, 'height after relayout');
+  });
+
+  test('a window resize triggers a relayout', async function () {
+    app.select('New York');
+    app.setExpanded(false);
+    var stage = document.getElementById('grid-stage');
+    var correct = stage.style.height;
+    stage.style.height = '10px';
+    window.dispatchEvent(new Event('resize'));
+    await nextFrame();
+    assertEqual(stage.style.height, correct, 'height after resize');
+  });
+
+  test('keeps focus on the toggle after it is clicked', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    var all = document.getElementById('view-all');
+    all.focus();
+    assertEqual(document.activeElement.id, 'view-all', 'focus before click');
+    all.click();
+    assertEqual(document.activeElement.id, 'view-all', 'focus after click');
+    assertEqual(app.expanded(), true, 'expanded after click');
+    assertEqual(document.getElementById('view-all').getAttribute('aria-pressed'),
+      'true', 'aria-pressed');
+  });
+
+  test('announces the view change when the toggle is used', function () {
+    app.select('New York');
+    app.setExpanded(false);
+    document.getElementById('live-region').textContent = '';
+    app.setExpanded(true);
+    assert(document.getElementById('live-region').textContent.length > 0,
+      'toggling should announce something');
+  });
+
+  test('expanded grid label agrees in number', function () {
+    var one = app.gridLabelFor({ name: 'Wyoming', reps: 1, popPerRep: 577719 }, true);
+    assert(one.indexOf('1 group of') !== -1, 'should read "1 group of" — got: ' + one);
+    assert(one.indexOf('1 groups') === -1, 'should not read "1 groups" — got: ' + one);
+    assert(one.indexOf('speaks for') !== -1, 'verb should agree — got: ' + one);
+
+    var many = app.gridLabelFor({ name: 'New York', reps: 26, popPerRep: 777529 }, true);
+    assert(many.indexOf('26 groups of') !== -1, 'should read "26 groups of" — got: ' + many);
+    assert(many.indexOf('speak for') !== -1, 'verb should agree — got: ' + many);
+  });
+
+  // --- Task 1: shared helpers ---
+
+  var format = window.Apportionment.format;
+  var records = window.Apportionment.records;
+
+  test('formats thousands separators', function () {
+    assertEqual(format.commas(777529), '777,529', 'commas');
+    assertEqual(format.commas(1), '1', 'no separator needed');
+  });
+
+  test('agrees in number', function () {
+    assertEqual(format.plural(1, 'rep'), 'rep', 'singular');
+    assertEqual(format.plural(26, 'rep'), 'reps', 'plural');
+  });
+
+  test('looks up a record for any census year', function () {
+    var r = records.recordFor('New York', 1910);
+    assertEqual(r.reps, 43, 'reps');
+    assertEqual(r.popPerRep, 211836, 'popPerRep');
+    assertEqual(records.recordFor('New York', 2020).reps, 26, '2020 reps');
+  });
+
+  test('rejects an unknown state or year', function () {
+    var threwState = false, threwYear = false;
+    try { records.recordFor('Atlantis', 1910); } catch (e) { threwState = e instanceof RangeError; }
+    try { records.recordFor('New York', 1911); } catch (e) { threwYear = e instanceof RangeError; }
+    assert(threwState, 'expected RangeError for the state');
+    assert(threwYear, 'expected RangeError for the year');
+  });
+
+  test('reports pre-statehood rows as having no representatives', function () {
+    assertEqual(records.hasReps(records.recordFor('Alaska', 1950)), false, 'Alaska 1950');
+    assertEqual(records.hasReps(records.recordFor('Alaska', 1960)), true, 'Alaska 1960');
+    assertEqual(records.hasReps(records.recordFor('New York', 1910)), true, 'New York 1910');
+  });
+
+  test('refuses to turn a null into zero dots', function () {
+    // null / 10000 === 0 in JS, which would draw Alaska's first five
+    // decades as empty grids that read as a measurement of zero.
+    var message = null;
+    try {
+      records.dotsFor(records.recordFor('Alaska', 1930));
+    } catch (error) {
+      if (!(error instanceof TypeError)) throw error;
+      message = error.message;
+    }
+    assert(message !== null, 'expected a TypeError');
+    // Named explicitly, because "cannot read property of undefined" is also
+    // a TypeError and would let this pass before the guard exists at all.
+    assert(message.indexOf('popPerRep') !== -1 && message.indexOf('Alaska') !== -1,
+      'the guard should name the record — got: ' + message);
+  });
+
+  test('sizes capacity to the busiest year, which is not always 2020', function () {
+    // Montana peaks in 2010 at 994,416 (99.4 dots), then halves in 2020.
+    assertEqual(records.capacityFor('Montana'), 100, 'Montana capacity');
+    assertEqual(records.capacityFor('New York'), 78, 'New York capacity');
+  });
+
+  // --- Task 2: store ---
+
+  var store = window.Apportionment.store;
+
+  test('starts on New York in 1920', function () {
+    // 1920 rather than 1910: it is the year the House was fixed at 435,
+    // so it is the year every later figure is a consequence of. 1910 is
+    // still reachable, one step back.
+    var s = store.get();
+    assertEqual(s.stateName, 'New York', 'stateName');
+    assertEqual(s.year, 1920, 'year');
+  });
+
+  test('Section 3 opens on 2020, not on Section 2 year', function () {
+    // Order-dependent, like the test above it: must run before anything
+    // touches the compare values. Section 3's year is its own from the
+    // start — mirroring Section 2 would open it on 1920, where the
+    // comparison has least to show.
+    assertEqual(store.get().compareYearA, 2020, 'compare A year default');
+    assertEqual(store.get().compareYearB, 2020, 'compare B year default');
+    assertEqual(store.get().year, 1920, 'Section 2 starts at the fixing');
+  });
+
+  test('the timeline slider markup opens on the same year as the store', function () {
+    // YearPicker corrects the slider on first render, but not before the
+    // first paint: a stale literal in the markup shows the wrong year for
+    // a frame, and the markup carries min/max/value while YearPicker owns
+    // the year list.
+    var slider = document.getElementById('year-slider');
+    var years = window.Apportionment.data.years;
+    assertEqual(years[Number(slider.getAttribute('value'))], 1920,
+      'the slider markup should open where the store does');
+    assertEqual(Number(slider.getAttribute('max')), years.length - 1,
+      'the slider max should span the year list');
+  });
+
+  test('notifies subscribers when a value changes', function () {
+    var seen = [];
+    var off = store.subscribe(function (s) { seen.push(s.changed + ':' + s.stateName + ':' + s.year); });
+    store.setStateName('Montana');
+    store.setYear(2020);
+    off();
+    assertEqual(seen.length, 2, 'notifications');
+    assertEqual(seen[0], 'stateName:Montana:1920', 'first');
+    assertEqual(seen[1], 'year:Montana:2020', 'second');
+  });
+
+  test('does not notify on a redundant set', function () {
+    // This single rule is what lets two dropdowns bind to one value
+    // without a suppression flag in either direction.
+    store.setStateName('Ohio');
+    var calls = 0;
+    var off = store.subscribe(function () { calls++; });
+    var changed = store.setStateName('Ohio');
+    off();
+    assertEqual(calls, 0, 'notifications');
+    assertEqual(changed, false, 'return value');
+  });
+
+  test('stops notifying after unsubscribe', function () {
+    var calls = 0;
+    var off = store.subscribe(function () { calls++; });
+    off();
+    store.setStateName('Texas');
+    assertEqual(calls, 0, 'notifications');
+  });
+
+  test('hands out a copy, not the live state', function () {
+    var snapshot = store.get();
+    snapshot.stateName = 'Nowhere';
+    assert(store.get().stateName !== 'Nowhere', 'store should be unaffected');
+  });
+
+  // --- Task 3: Section 1 on the store ---
+
+  test('Section 1 follows the store', function () {
+    store.setStateName('Ohio');
+    assertEqual(document.getElementById('state-select').value, 'Ohio', 'dropdown');
+    assert(document.getElementById('headline-rest').textContent.indexOf('people per representative') !== -1,
+      'headline rendered');
+  });
+
+  test('selecting through the app moves the store', function () {
+    app.select('Nevada');
+    assertEqual(store.get().stateName, 'Nevada', 'store');
+    assertEqual(document.getElementById('state-select').value, 'Nevada', 'dropdown');
+  });
+
+  test('Section 1 ignores year changes', function () {
+    app.select('New York');
+    var before = document.getElementById('headline-rest').textContent;
+    store.setYear(1910);
+    assertEqual(document.getElementById('headline-rest').textContent, before,
+      'Section 1 is always 2020 and must not redraw for a year change');
+  });
+
+  // --- Task 4: capacity and showing ---
+
+  test('renders a capacity of dots, all off', function () {
+    DotGrid.renderCapacity(sandbox, { dots: 78 });
+    assertEqual(sandbox.querySelectorAll('.dot').length, 78, 'dot elements');
+    assertEqual(sandbox.querySelectorAll('.dot--on').length, 0, 'lit dots');
+    assertEqual(sandbox.querySelectorAll('.cluster').length, 1, 'clusters');
+  });
+
+  test('lights the first N dots plus a partial', function () {
+    DotGrid.renderCapacity(sandbox, { dots: 78 });
+    DotGrid.setShowing(sandbox, { whole: 21, fraction: 0.18 });
+    assertEqual(sandbox.querySelectorAll('.dot--on').length, 22, 'lit dots');
+    assertEqual(sandbox.querySelectorAll('.dot--partial').length, 1, 'partial');
+    var dots = sandbox.querySelectorAll('.dot');
+    assertEqual(dots[21].style.getPropertyValue('--fill'), '18.00%', 'fill');
+  });
+
+  test('creates and destroys nothing when the year changes', function () {
+    DotGrid.renderCapacity(sandbox, { dots: 78 });
+    var first = sandbox.querySelector('.dot');
+    DotGrid.setShowing(sandbox, { whole: 21, fraction: 0.18 });
+    DotGrid.setShowing(sandbox, { whole: 77, fraction: 0.75 });
+    assertEqual(sandbox.querySelectorAll('.dot').length, 78, 'dot elements');
+    assert(sandbox.querySelector('.dot') === first, 'the same nodes must persist');
+  });
+
+  test('sheds dots when the count falls — Montana 2010 to 2020', function () {
+    // 994,416 -> 542,704 people per representative: the state gained a
+    // second seat and each representative's load halved. Code that assumes
+    // the count only grows renders this as a frozen or broken grid.
+    var capacity = records.capacityFor('Montana');
+    DotGrid.renderCapacity(sandbox, { dots: capacity });
+
+    var y2010 = records.dotsFor(records.recordFor('Montana', 2010));
+    DotGrid.setShowing(sandbox, y2010);
+    assertEqual(sandbox.querySelectorAll('.dot--on').length, 100, '2010 lit');
+
+    var y2020 = records.dotsFor(records.recordFor('Montana', 2020));
+    DotGrid.setShowing(sandbox, y2020);
+    assertEqual(sandbox.querySelectorAll('.dot--on').length, 55, '2020 lit');
+    assertEqual(sandbox.querySelectorAll('.dot').length, 100, 'elements unchanged');
+  });
+
+  test('clears the partial when a year lands on a whole dot', function () {
+    DotGrid.renderCapacity(sandbox, { dots: 20 });
+    DotGrid.setShowing(sandbox, { whole: 10, fraction: 0.5 });
+    DotGrid.setShowing(sandbox, { whole: 12, fraction: 0 });
+    assertEqual(sandbox.querySelectorAll('.dot--partial').length, 0, 'partials');
+    assertEqual(sandbox.querySelectorAll('.dot--on').length, 12, 'lit dots');
+  });
+
+  test('refuses to show more dots than were rendered', function () {
+    DotGrid.renderCapacity(sandbox, { dots: 10 });
+    var threw = false;
+    try { DotGrid.setShowing(sandbox, { whole: 11, fraction: 0 }); }
+    catch (e) { threw = e instanceof RangeError; }
+    assert(threw, 'expected a RangeError');
+  });
+
+  test('reports the height of a full ten-row grid', function () {
+    // 10 dots + 9 gaps, times the scale.
+    var styles = getComputedStyle(document.documentElement);
+    var dot = parseFloat(styles.getPropertyValue('--dot-size'));
+    var gap = parseFloat(styles.getPropertyValue('--dot-gap'));
+    assertEqual(DotGrid.stageHeight(1), 10 * dot + 9 * gap, 'unscaled');
+    assertEqual(DotGrid.stageHeight(4), (10 * dot + 9 * gap) * 4, 'scaled');
+  });
+
+  // --- Task 5: Section 2 ---
+
+  var section2 = window.Apportionment.section2;
+
+  test('composes the year sentence', function () {
+    assertEqual(section2.sentenceFor(records.recordFor('New York', 1910)),
+      'Starting in 1910, New York had 43 representatives — 211,836 people each.',
+      'plural');
+  });
+
+  test('agrees in number for a single representative', function () {
+    assertEqual(section2.sentenceFor(records.recordFor('Wyoming', 2020)),
+      'Starting in 2020, Wyoming has 1 representative until the next census — 577,719 people each.',
+      'singular, and the latest census reads as current');
+  });
+
+  test('says a state was not yet a state, without naming a year', function () {
+    var copy = section2.sentenceFor(records.recordFor('Alaska', 1930));
+    assertEqual(copy, 'In 1930, Alaska was not yet a state.', 'copy');
+    assert(copy.indexOf('1959') === -1, 'must not name a statehood year');
+  });
+
+  test('renders no dots for a pre-statehood year', function () {
+    // An empty 10x10 frame would read as a measurement of zero.
+    store.setStateName('Alaska');
+    store.setYear(1930);
+    assertEqual(document.querySelectorAll('#timeline-stage .dot--on').length, 0, 'lit dots');
+    assert(document.getElementById('timeline-gap').textContent.length > 0, 'gap note shown');
+  });
+
+  test('keeps the stage height across a gap year', function () {
+    store.setStateName('Alaska');
+    store.setYear(1960);
+    var withDots = document.getElementById('timeline-stage').style.height;
+    store.setYear(1930);
+    assertEqual(document.getElementById('timeline-stage').style.height, withDots,
+      'the page must not jump as playback crosses statehood');
+  });
+
+  test('lights the right number of dots for a year', function () {
+    store.setStateName('New York');
+    store.setYear(1910);
+    assertEqual(document.querySelectorAll('#timeline-stage .dot--on').length, 22, '1910');
+    store.setYear(2020);
+    assertEqual(document.querySelectorAll('#timeline-stage .dot--on').length, 78, '2020');
+  });
+
+  test('both dropdowns always agree', function () {
+    store.setStateName('Texas');
+    assertEqual(document.getElementById('state-select').value, 'Texas', 'Section 1');
+    assertEqual(document.getElementById('timeline-state').value, 'Texas', 'Section 2');
+    document.getElementById('timeline-state').value = 'Ohio';
+    document.getElementById('timeline-state').dispatchEvent(new Event('change'));
+    assertEqual(document.getElementById('state-select').value, 'Ohio', 'Section 1 followed');
+    assertEqual(store.get().stateName, 'Ohio', 'store');
+  });
+
+  test('keeps the year when the state changes', function () {
+    store.setStateName('New York');
+    store.setYear(1950);
+    store.setStateName('Alaska');
+    assertEqual(store.get().year, 1950, 'year preserved');
+    assert(document.getElementById('timeline-gap').textContent.length > 0,
+      'Alaska 1950 is a gap and should say so');
+  });
+
+  // --- Task 6: stepper ---
+
+  test('maps slider indices to census years', function () {
+    assertEqual(section2.yearAt(0), 1910, 'first');
+    assertEqual(section2.yearAt(11), 2020, 'last');
+    assertEqual(section2.indexOf(2020), 11, 'index of 2020');
+  });
+
+  test('the slider follows the year', function () {
+    store.setYear(1950);
+    assertEqual(document.getElementById('year-slider').value, '4', 'slider value');
+  });
+
+  test('announces years, not indices', function () {
+    // A bare range input reads as "7 of 11", which means nothing.
+    store.setYear(1980);
+    assertEqual(document.getElementById('year-slider').getAttribute('aria-valuetext'),
+      '1980', 'aria-valuetext');
+  });
+
+  test('dragging the slider sets the year', function () {
+    var slider = document.getElementById('year-slider');
+    slider.value = '2';
+    slider.dispatchEvent(new Event('input'));
+    assertEqual(store.get().year, 1930, 'year');
+  });
+
+  test('next and previous step one census', function () {
+    store.setYear(1950);
+    section2.next();
+    assertEqual(store.get().year, 1960, 'after next');
+    section2.previous();
+    assertEqual(store.get().year, 1950, 'after previous');
+  });
+
+  test('stops at the ends instead of wrapping', function () {
+    // Manual control should not silently teleport the reader across a
+    // century because they clicked once too often.
+    store.setYear(2020);
+    section2.next();
+    assertEqual(store.get().year, 2020, 'held at the last census');
+    store.setYear(1910);
+    section2.previous();
+    assertEqual(store.get().year, 1910, 'held at the first census');
+  });
+
+  test('disables the control that has nowhere to go', function () {
+    store.setYear(1910);
+    assert(document.getElementById('year-prev').disabled, 'prev disabled at 1910');
+    assert(!document.getElementById('year-next').disabled, 'next enabled at 1910');
+    store.setYear(2020);
+    assert(!document.getElementById('year-prev').disabled, 'prev enabled at 2020');
+    assert(document.getElementById('year-next').disabled, 'next disabled at 2020');
+    store.setYear(1950);
+    assert(!document.getElementById('year-prev').disabled, 'prev enabled mid-span');
+    assert(!document.getElementById('year-next').disabled, 'next enabled mid-span');
+  });
+
+  test('the chevrons carry accessible names', function () {
+    // The visible content is an SVG, so the name has to come from aria.
+    var prev = document.getElementById('year-prev');
+    var next = document.getElementById('year-next');
+    assert((prev.getAttribute('aria-label') || '').length > 0, 'prev needs a label');
+    assert((next.getAttribute('aria-label') || '').length > 0, 'next needs a label');
+    assertEqual(prev.querySelectorAll('svg').length, 1, 'prev icon');
+    assertEqual(next.querySelectorAll('svg').length, 1, 'next icon');
+  });
+
+  test('clicking a chevron moves the year', function () {
+    store.setYear(1940);
+    document.getElementById('year-next').click();
+    assertEqual(store.get().year, 1950, 'after next click');
+    document.getElementById('year-prev').click();
+    assertEqual(store.get().year, 1940, 'after prev click');
+  });
+
+  test('every year change announces', function () {
+    // Nothing moves on its own any more, so there is no flood to guard
+    // against: each change is something the reader asked for.
+    store.setYear(1960);
+    document.getElementById('timeline-live').textContent = '';
+    section2.next();
+    assert(document.getElementById('timeline-live').textContent.indexOf('1970') !== -1,
+      'got: ' + document.getElementById('timeline-live').textContent);
+
+    document.getElementById('timeline-live').textContent = '';
+    var slider = document.getElementById('year-slider');
+    slider.value = '3';
+    slider.dispatchEvent(new Event('input'));
+    assert(document.getElementById('timeline-live').textContent.length > 0,
+      'a slider change should announce');
+  });
+
+  test('nothing moves without the reader asking', function () {
+    // No autoplay: there is no timer to start.
+    assertEqual(typeof section2.play, 'undefined', 'play should be gone');
+    assertEqual(typeof section2.playing, 'undefined', 'playing should be gone');
+    assertEqual(document.getElementById('play-toggle'), null, 'play button should be gone');
+  });
+
+  // --- Task 7: transitions ---
+
+  test('timeline dots carry a transition', function () {
+    store.setStateName('New York');
+    store.setYear(1910);
+    var dot = document.querySelector('#timeline-stage .dot');
+    var styles = getComputedStyle(dot);
+    assert(styles.transitionDuration !== '0s', 'dots should transition, got ' + styles.transitionDuration);
+    assert(styles.transitionProperty.indexOf('opacity') !== -1,
+      'opacity should transition, got ' + styles.transitionProperty);
+  });
+
+  test('a falling year turns dots off rather than removing them', function () {
+    store.setStateName('Montana');
+    store.setYear(2010);
+    var before = document.querySelectorAll('#timeline-stage .dot').length;
+    assertEqual(document.querySelectorAll('#timeline-stage .dot--on').length, 100, '2010 lit');
+    store.setYear(2020);
+    assertEqual(document.querySelectorAll('#timeline-stage .dot').length, before,
+      'elements must persist so the 45 lost dots can animate out');
+    assertEqual(document.querySelectorAll('#timeline-stage .dot--on').length, 55, '2020 lit');
+  });
+
+  test('dots stagger by index', function () {
+    store.setStateName('New York');
+    store.setYear(2020);
+    var dots = document.querySelectorAll('#timeline-stage .dot');
+    var first = getComputedStyle(dots[0]).transitionDelay;
+    var later = getComputedStyle(dots[40]).transitionDelay;
+    assert(first !== later, 'delay should vary with index, both were ' + first);
+  });
+
+  test('the dot wave settles within 700ms', function () {
+    // Nothing autoplays now, but a reader clicking the chevron repeatedly
+    // should see each step resolve rather than pile up. Montana has the
+    // largest capacity, so the longest wave.
+    store.setStateName('Montana');
+    store.setYear(2010);
+    var dots = document.querySelectorAll('#timeline-stage .dot');
+    var last = getComputedStyle(dots[dots.length - 1]);
+    var delay = parseFloat(last.transitionDelay) * 1000;
+    var duration = parseFloat(last.transitionDuration) * 1000;
+    assert(delay + duration <= 700,
+      'the wave takes ' + Math.round(delay + duration) +
+      'ms but a playback step is 700ms');
+  });
+
+  test('the gap line sits where the grid would be', function () {
+    // The spec puts the line "in its place" — not below the empty space
+    // the stage reserves, which reads as a void followed by a footnote.
+    store.setStateName('Alaska');
+    store.setYear(1930);
+    var stage = document.getElementById('timeline-stage').getBoundingClientRect();
+    var note = document.getElementById('timeline-gap').getBoundingClientRect();
+    assert(note.top >= stage.top - 1 && note.top < stage.bottom,
+      'note top ' + Math.round(note.top) + ' should sit within the stage ' +
+      Math.round(stage.top) + '-' + Math.round(stage.bottom));
+  });
+
+  // --- Review fixes ---
+
+  test('Section 2 relayout restores a stale stage height', function () {
+    // The stage height is an inline pixel value derived from tokens that
+    // change at the 30rem breakpoint. Section 1 has a resize relayout;
+    // without one here, rotating a phone paints dots over Section 3.
+    store.setStateName('Montana');
+    store.setYear(2010);
+    var stage = document.getElementById('timeline-stage');
+    var correct = stage.style.height;
+    stage.style.height = '10px';
+    section2.relayout();
+    assertEqual(stage.style.height, correct, 'height after relayout');
+  });
+
+  test('a window resize relayouts Section 2', async function () {
+    store.setStateName('New York');
+    store.setYear(2020);
+    var stage = document.getElementById('timeline-stage');
+    var correct = stage.style.height;
+    stage.style.height = '10px';
+    window.dispatchEvent(new Event('resize'));
+    await nextFrame();
+    assertEqual(stage.style.height, correct, 'height after resize');
+  });
+
+  test('a redundant slider input does not leave an announcement armed', function () {
+    // Arming before the set means a set that changes nothing leaves the
+    // flag up, and some later unrelated render speaks instead.
+    store.setStateName('New York');
+    store.setYear(1960);
+    var slider = document.getElementById('year-slider');
+    slider.value = String(section2.indexOf(1960));   // same year: redundant
+    slider.dispatchEvent(new Event('input'));
+    document.getElementById('timeline-live').textContent = '';
+    section2.relayout();                             // an unrelated render
+    assertEqual(document.getElementById('timeline-live').textContent, '',
+      'a redundant set must not arm the next render');
+  });
+
+  // The track-fill indicator this used to assert was deliberately removed:
+  // it bloomed a soft red blob around the whole control. Focus is now a
+  // crisp ring on the thumb, and NEITHER route to assert it works here —
+  // getComputedStyle(slider, '::-webkit-slider-thumb') reports boxShadow
+  // 'none' whatever the rule says, and document.styleSheets[n].cssRules
+  // throws SecurityError over file://. The ring is verified by screenshot
+  // (tools/drive.mjs) and guarded only by the comment on the CSS rule.
+  // What remains measurable is that the track stays clean — asserted in
+  // 'the slider track takes no fill when focus lands in it'.
+
+  test('each section announces its own control, not the other', function () {
+    store.setStateName('New York');
+    document.getElementById('live-region').textContent = '';
+    document.getElementById('timeline-live').textContent = '';
+
+    var s2 = document.getElementById('timeline-state');
+    s2.value = 'Alaska';
+    s2.dispatchEvent(new Event('change'));
+    assert(document.getElementById('timeline-live').textContent.indexOf('Alaska') !== -1,
+      'Section 2 should announce, got: ' + document.getElementById('timeline-live').textContent);
+    assertEqual(document.getElementById('live-region').textContent, '',
+      'Section 1 must not announce a change made in Section 2');
+
+    document.getElementById('timeline-live').textContent = '';
+    var s1 = document.getElementById('state-select');
+    s1.value = 'Texas';
+    s1.dispatchEvent(new Event('change'));
+    assert(document.getElementById('live-region').textContent.indexOf('Texas') !== -1,
+      'Section 1 should announce, got: ' + document.getElementById('live-region').textContent);
+    assertEqual(document.getElementById('timeline-live').textContent, '',
+      'Section 2 must not announce a change made in Section 1');
+  });
+
+  test('the timeline announcement names its state', function () {
+    // "1930: was not yet a state." leaves a screen-reader user asking which.
+    store.setStateName('Alaska');
+    store.setYear(1960);
+    document.getElementById('timeline-live').textContent = '';
+    section2.next();
+    var spoken = document.getElementById('timeline-live').textContent;
+    assert(spoken.indexOf('Alaska') !== -1, 'should name the state, got: ' + spoken);
+    assert(spoken.indexOf('1970') !== -1, 'should name the year, got: ' + spoken);
+  });
+
+  // --- Timeline annotation ---
+
+  test('marks 1920 on the track with its note', function () {
+    var note = document.querySelector('.player__mark-note');
+    assert(note !== null, 'the annotation note should exist');
+    assertEqual(note.textContent.trim(),
+      'In 1920, the number of representatives was fixed to 435.', 'note text');
+  });
+
+  test('the mark sits at the 1920 position on the track', function () {
+    // 1920 is index 1 of 12 censuses, so one eleventh along the track.
+    var track = document.querySelector('.player__track').getBoundingClientRect();
+    var mark = document.getElementById('year-mark').getBoundingClientRect();
+    assert(track.width > 0, 'the track needs a width to measure against');
+    var fraction = (mark.left - track.left) / track.width;
+    assert(Math.abs(fraction - 1 / 11) < 0.04,
+      'mark sits at ' + fraction.toFixed(3) + ' of the track, expected ~' +
+      (1 / 11).toFixed(3));
+  });
+
+  test('the annotation is readable, not decoration', function () {
+    // The line is decorative; the sentence is content and must reach a
+    // screen reader.
+    var note = document.querySelector('.player__mark-note');
+    assertEqual(note.closest('[aria-hidden="true"]'), null,
+      'the note must not sit inside an aria-hidden subtree');
+    var line = document.querySelector('.player__mark-line');
+    assertEqual(line.getAttribute('aria-hidden'), 'true', 'the line is decorative');
+  });
+
+  // --- Task 1: compare values ---
+
+  // Values only: the store knows what a preset IS, never what it MEANS.
+  // section4 registers the real list at init; this is the same shape.
+  var PRESET_FIXTURE = [
+    { id: 'widest',   a: { state: 'Delaware', year: 2020 }, b: { state: 'Montana', year: 2020 } },
+    { id: 'one-seat', a: { state: 'Delaware', year: 2020 }, b: { state: 'Wyoming', year: 2020 } },
+    { id: 'montana',  a: { state: 'Montana',  year: 2010 }, b: { state: 'Montana', year: 2020 } }
+  ];
+
+  test('the comparison opens on the widest-gap pair', function () {
+    var s = store.get();
+    assertEqual(s.comparePreset, 'widest', 'preset');
+    assertEqual(s.compareA, 'Delaware', 'A');
+    assertEqual(s.compareYearA, 2020, 'A year');
+    assertEqual(s.compareB, 'Montana', 'B');
+    assertEqual(s.compareYearB, 2020, 'B year');
+  });
+
+  test('each column carries its own year', function () {
+    store.registerComparePresets(PRESET_FIXTURE);
+    store.setComparePreset('widest');
+    store.setCompareYearA(2010);
+    assertEqual(store.get().compareYearA, 2010, 'A moved');
+    assertEqual(store.get().compareYearB, 2020, 'B did not');
+  });
+
+  test('a redundant compare set does not notify', function () {
+    store.setCompareA('Ohio');
+    assertEqual(store.setCompareA('Ohio'), false, 'second set');
+  });
+
+  test('compare changes notify with their own keys', function () {
+    store.registerComparePresets(PRESET_FIXTURE);
+    store.setCompareB('Idaho');
+    var seen = [];
+    var off = store.subscribe(function (s) { seen.push(s.changed); });
+    store.setCompareA('Utah');
+    store.setCompareB('Maine');
+    store.setCompareYearA(1930);
+    store.setCompareYearB(1940);
+    off();
+    assertEqual(seen.join(','),
+      'compareA,compareB,compareYearA,compareYearB', 'changed keys');
+  });
+
+  test('the comparison no longer follows the state picked above it', function () {
+    // Mirroring is gone deliberately: a preset that changes with a control
+    // three screens up is not a preset.
+    store.registerComparePresets(PRESET_FIXTURE);
+    store.setComparePreset('widest');
+    store.setStateName('Nevada');
+    assertEqual(store.get().compareA, 'Delaware', 'A held');
+    assertEqual(store.get().stateName, 'Nevada', 'the section above still moved');
+  });
+
+  test("editing a compare value marks Custom as the reader's own", function () {
+    store.registerComparePresets(PRESET_FIXTURE);
+    store.setComparePreset('widest');
+    assertEqual(store.get().customTouched, false, 'untouched at the start');
+    store.setComparePreset('custom');
+    assertEqual(store.get().customTouched, false, 'entering Custom is not editing');
+    store.setCompareA('Texas');
+    assertEqual(store.get().customTouched, true, 'editing is');
+  });
+
+  test('Custom opens on the pair the reader was just looking at', function () {
+    store.registerComparePresets(PRESET_FIXTURE);
+    store.setComparePreset('montana');
+    store.setComparePreset('custom');
+    assertEqual(store.get().compareA, 'Montana', 'A inherited');
+    assertEqual(store.get().compareYearA, 2010, 'A year inherited');
+    assertEqual(store.get().compareYearB, 2020, 'B year inherited');
+  });
+
+  test("a preset never clears the reader's custom pair", function () {
+    store.registerComparePresets(PRESET_FIXTURE);
+    store.setComparePreset('custom');
+    store.setCompareA('Texas');
+    store.setComparePreset('montana');
+    assertEqual(store.get().compareA, 'Montana', 'the preset shows');
+    store.setComparePreset('custom');
+    assertEqual(store.get().compareA, 'Texas', 'and Texas came back');
+  });
+
+  // --- Task 2: year picker component ---
+
+  test('the year picker drives whatever year it is given', function () {
+    var host = document.createElement('div');
+    host.innerHTML =
+      '<button data-yearpicker="prev"></button>' +
+      '<input type="range" data-yearpicker="slider" min="0" max="11" step="1">' +
+      '<button data-yearpicker="next"></button>';
+    sandbox.appendChild(host);
+
+    var held = 1950;
+    var picker = window.Apportionment.YearPicker.create(host, {
+      years: window.Apportionment.data.years,
+      getYear: function () { return held; },
+      setYear: function (year) { held = year; picker.render(); }
+    });
+    picker.render();
+
+    var slider = host.querySelector('[data-yearpicker="slider"]');
+    assertEqual(slider.value, '4', 'slider reflects 1950');
+    assertEqual(slider.getAttribute('aria-valuetext'), '1950', 'announces the year');
+
+    host.querySelector('[data-yearpicker="next"]').click();
+    assertEqual(held, 1960, 'next steps forward');
+    host.querySelector('[data-yearpicker="prev"]').click();
+    assertEqual(held, 1950, 'prev steps back');
+
+    held = 1910; picker.render();
+    assertEqual(host.querySelector('[data-yearpicker="prev"]').disabled, true, 'prev off at 1910');
+    held = 2020; picker.render();
+    assertEqual(host.querySelector('[data-yearpicker="next"]').disabled, true, 'next off at 2020');
+
+    host.remove();
+  });
+
+  test('the year picker holds at the ends instead of wrapping', function () {
+    var host = document.createElement('div');
+    host.innerHTML =
+      '<button data-yearpicker="prev"></button>' +
+      '<input type="range" data-yearpicker="slider" min="0" max="11" step="1">' +
+      '<button data-yearpicker="next"></button>';
+    sandbox.appendChild(host);
+
+    var held = 2020;
+    var picker = window.Apportionment.YearPicker.create(host, {
+      years: window.Apportionment.data.years,
+      getYear: function () { return held; },
+      setYear: function (year) { held = year; }
+    });
+    picker.render();
+    host.querySelector('[data-yearpicker="next"]').click();
+    assertEqual(held, 2020, 'held at the last census');
+
+    host.remove();
+  });
+
+  test('slider styling survives a second instance', function () {
+    // Replaces 'both timelines are styled the same', which compared the two
+    // sliders on the page — there is only one now. The trap it guarded is
+    // still live: #year-slider-scoped CSS made the SECOND instance render
+    // as a browser-default blue stub, which is why the rules are scoped to
+    // [data-yearpicker="slider"]. Build a second one and check it styles.
+    if (document.activeElement) document.activeElement.blur();
+    var host = document.createElement('div');
+    host.className = 'player';
+    host.innerHTML = '<div class="player__track">' +
+      '<input type="range" data-yearpicker="slider" min="0" max="11" value="3">' +
+      '</div>';
+    document.getElementById('sandbox').appendChild(host);
+    var second = host.querySelector('[data-yearpicker="slider"]');
+    var first = document.getElementById('year-slider');
+    assertEqual(getComputedStyle(second).accentColor,
+      getComputedStyle(first).accentColor, 'accent-color');
+    assertEqual(getComputedStyle(second).minHeight,
+      getComputedStyle(first).minHeight, 'touch target');
+    var track = host.querySelector('.player__track');
+    var ratio = second.getBoundingClientRect().width /
+      track.getBoundingClientRect().width;
+    assert(ratio > 0.95, 'the slider should fill its track, got ' + ratio.toFixed(2));
+    host.remove();
+  });
+
+  test('the 1920 annotation appears exactly once on the page', function () {
+    // Replaces 'Section 3 carries no 1920 annotation'. The section it named
+    // has no timeline at all now, so the assertion moves to the page: the
+    // reader should meet this note once.
+    assertEqual(document.querySelectorAll('.player__mark').length, 1,
+      'the annotation should appear once');
+  });
+
+  // --- Task 2: the tab strip component ---
+
+  var TAB_FIXTURE = [
+    { id: 'one', label: 'One' }, { id: 'two', label: 'Two' },
+    { id: 'three', label: 'Three' }, { id: 'custom', label: 'Custom' }
+  ];
+
+  // Driven by callbacks like YearPicker, so the component never reaches
+  // for the store and a test can hold the value itself.
+  function makeTabs(startAt) {
+    var host = document.createElement('div');
+    document.getElementById('tabs-sandbox').appendChild(host);
+    var held = startAt || 'one';
+    var strip = global_Apportionment().CompareTabs.create(host, {
+      tabs: TAB_FIXTURE,
+      getActive: function () { return held; },
+      setActive: function (id) { held = id; strip.render(); }
+    });
+    strip.render();
+    return { host: host, strip: strip, active: function () { return held; } };
+  }
+  function global_Apportionment() { return window.Apportionment; }
+
+  test('the tab strip is a tablist with one tab per entry', function () {
+    var t = makeTabs();
+    assertEqual(t.host.getAttribute('role'), 'tablist', 'root role');
+    var tabs = t.host.querySelectorAll('[role="tab"]');
+    assertEqual(tabs.length, 4, 'tab count');
+    assertEqual(tabs[0].textContent, 'One', 'label');
+    var selected = t.host.querySelectorAll('[aria-selected="true"]');
+    assertEqual(selected.length, 1, 'exactly one selected');
+    assertEqual(selected[0].textContent, 'One', 'the active one');
+    t.host.remove();
+  });
+
+  test('only the active tab is in the tab order', function () {
+    // Roving tabindex: a tablist is one stop, not four.
+    var t = makeTabs('three');
+    var tabs = t.host.querySelectorAll('[role="tab"]');
+    var order = [].map.call(tabs, function (b) { return b.tabIndex; });
+    assertEqual(order.join(','), '-1,-1,0,-1', 'tabindex roving');
+    t.host.remove();
+  });
+
+  test('arrow keys move between tabs, and the ends hold', function () {
+    // Holding rather than wrapping, matching YearPicker.stepBy: a reader
+    // pressing once too often should not be thrown across the strip.
+    var t = makeTabs();
+    var tabs = t.host.querySelectorAll('[role="tab"]');
+    function press(key) {
+      t.host.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true }));
+    }
+    tabs[0].focus();
+    press('ArrowLeft');
+    assertEqual(t.active(), 'one', 'held at the first');
+    press('ArrowRight');
+    assertEqual(t.active(), 'two', 'moved right');
+    assertEqual(document.activeElement, t.host.querySelectorAll('[role="tab"]')[1],
+      'focus followed');
+    press('End');
+    assertEqual(t.active(), 'custom', 'End jumps to the last');
+    press('ArrowRight');
+    assertEqual(t.active(), 'custom', 'held at the last');
+    press('Home');
+    assertEqual(t.active(), 'one', 'Home jumps to the first');
+    t.host.remove();
+  });
+
+  test('clicking a tab selects it', function () {
+    var t = makeTabs();
+    t.host.querySelectorAll('[role="tab"]')[2].click();
+    assertEqual(t.active(), 'three', 'clicked');
+    assertEqual(t.host.querySelectorAll('[aria-selected="true"]')[0].textContent,
+      'Three', 'and shows it');
+    t.host.remove();
+  });
+
+  test("re-rendering keeps the reader's focus on the tab strip", function () {
+    // js/section1.js:renderToggle carries a comment about this exact bug:
+    // replacing the nodes throws away focus and silences aria-selected.
+    var t = makeTabs();
+    var tabs = t.host.querySelectorAll('[role="tab"]');
+    tabs[1].focus();
+    var focused = document.activeElement;
+    t.strip.render();
+    assertEqual(document.activeElement, focused, 'focus survived a re-render');
+    assertEqual(t.host.querySelectorAll('[role="tab"]')[1], focused,
+      'and it is the same node, not a replacement');
+    t.host.remove();
+  });
+
+  // --- Final review: the sentence under per-column years ---
+
+  test('a state against itself at two years is not "with itself"', function () {
+    // partsFor was written when both columns shared one year. Giving each
+    // its own made this branch lie: the Montana preset — the pair Custom
+    // inherits by default — announced "You're comparing Montana with
+    // itself" to a screen reader, when the two columns differ by a decade
+    // and that difference is the whole point.
+    var text = section4.sentenceFor(records.recordFor('Montana', 2010),
+                                    records.recordFor('Montana', 2020));
+    assert(text.indexOf('with itself') === -1, 'got: ' + text);
+    assert(text.indexOf('2010') !== -1 && text.indexOf('2020') !== -1,
+      'both years must be named, got: ' + text);
+    assert(text.indexOf('1.83') !== -1, 'and the ratio, got: ' + text);
+  });
+
+  test('the same state in the same year is still "with itself"', function () {
+    assertEqual(section4.sentenceFor(records.recordFor('Ohio', 2020),
+                                     records.recordFor('Ohio', 2020)),
+      "You're comparing Ohio with itself.");
+  });
+
+  test('two states at two years name both years', function () {
+    // It used to name only the left column's year, as though it covered
+    // both — so Montana's 2020 figure was reported as a 2010 one.
+    var text = section4.sentenceFor(records.recordFor('Delaware', 2010),
+                                    records.recordFor('Montana', 2020));
+    assert(text.indexOf('2010') !== -1 && text.indexOf('2020') !== -1,
+      'both years must be named, got: ' + text);
+  });
+
+  test('two states in one year read as they always did', function () {
+    assertEqual(section4.sentenceFor(records.recordFor('Delaware', 2020),
+                                     records.recordFor('Montana', 2020)),
+      'In 2020, a representative spoke for 1.83\u00d7 as many people in Delaware as in Montana.');
+  });
+
+  test('a pre-statehood pair names each side\'s own year', function () {
+    var text = section4.sentenceFor(records.recordFor('Alaska', 1920),
+                                    records.recordFor('Hawaii', 1930));
+    assert(text.indexOf('1920') !== -1 && text.indexOf('1930') !== -1,
+      'each side carries its own year, got: ' + text);
+  });
+
+  test('a near-equal pair at two years still avoids "1.00x"', function () {
+    // Montana 2010 (994,416) against Delaware 2020 (990,837) is 1.004x.
+    var text = section4.sentenceFor(records.recordFor('Montana', 2010),
+                                    records.recordFor('Delaware', 2020));
+    assert(text.indexOf('1.00') === -1, 'got: ' + text);
+    assert(text.indexOf('2010') !== -1 && text.indexOf('2020') !== -1,
+      'and still names both years, got: ' + text);
+  });
+
+  // --- Task 6: the heading row holds its height ---
+
+  function comparePanelTop() {
+    return Math.round(
+      document.getElementById('compare-panel').getBoundingClientRect().top -
+      document.getElementById('section-4').getBoundingClientRect().top);
+  }
+
+  test('switching between presets does not move the comparison', function () {
+    // The three presets do not wrap to the same number of lines, so
+    // without a reserved row the panel shifts as a reader works along
+    // the strip. Custom is deliberately exempt — see below.
+    var tops = section4.PRESETS
+      .filter(function (p) { return p.id !== 'custom'; })
+      .map(function (p) { store.setComparePreset(p.id); return comparePanelTop(); });
+    var distinct = tops.filter(function (t, i) { return tops.indexOf(t) === i; });
+    assertEqual(distinct.length, 1,
+      'panel top moved between presets: ' + tops.join(','));
+    store.setComparePreset('widest');
+  });
+
+  test('Custom drops the heading row and lifts the graphics', function () {
+    // Asked for: the reserved row left Custom with a screen of empty
+    // space above controls that need no argument. A jump on this one tab
+    // is the accepted cost.
+    store.setComparePreset('widest');
+    var withHeading = comparePanelTop();
+    store.setComparePreset('custom');
+    var withoutHeading = comparePanelTop();
+    assert(withoutHeading < withHeading - 100,
+      'Custom should lift the panel well clear of the heading row, ' +
+      withoutHeading + ' against ' + withHeading);
+    assert(document.getElementById('compare-headline').hidden,
+      'the heading row should be out of flow, not merely empty — an empty ' +
+      'one still carries its bottom margin');
+    store.setComparePreset('widest');
+  });
+
+  test('the heading hangs at the bottom of its reserved row', function () {
+    // The row is sized to the tallest heading so the presets do not shift
+    // against each other, but the reserved room goes ABOVE the sentence.
+    // Below it, a three-line heading sat ~95px clear of the columns it
+    // introduces while a four-line one sat 44px clear.
+    var host = document.getElementById('compare-headline');
+    var gaps = section4.PRESETS
+      .filter(function (p) { return p.id !== 'custom'; })
+      .map(function (p) {
+        store.setComparePreset(p.id);
+        return Math.round(
+          document.getElementById('compare-panel').getBoundingClientRect().top -
+          host.getBoundingClientRect().bottom);
+      });
+    var distinct = gaps.filter(function (g, i) { return gaps.indexOf(g) === i; });
+    assertEqual(distinct.length, 1,
+      'the sentence should end the same distance above the columns on every ' +
+      'preset, got ' + gaps.join(','));
+    store.setComparePreset('widest');
+  });
+
+  test('the heading sits closer to the columns than it did', function () {
+    store.setComparePreset('widest');
+    var gap = Math.round(
+      document.getElementById('compare-panel').getBoundingClientRect().top -
+      document.getElementById('compare-headline').getBoundingClientRect().bottom);
+    assert(gap <= 50, 'headline to columns is ' + gap + 'px, was 84');
+    assert(gap >= 20, 'but not collapsed onto them, got ' + gap);
+  });
+
+  test('the figure line stands off from the dots it labels', function () {
+    store.setComparePreset('widest');
+    var gap = Math.round(
+      document.getElementById('compare-grid-a').getBoundingClientRect().top -
+      document.getElementById('compare-count-a').getBoundingClientRect().bottom);
+    assert(gap >= 10, 'count to dots is ' + gap + 'px, was 0');
+  });
+
+  // --- Task 5: Custom mode ---
+
+  test('controls exist only on the Custom tab', function () {
+    // Measured by what a reader can see and click, not by a style
+    // property: a select inside a display:none parent still computes its
+    // own display as inline-block.
+    var ids = ['compare-state-a', 'compare-year-a', 'compare-state-b', 'compare-year-b'];
+    function widths() {
+      return ids.map(function (id) {
+        return Math.round(document.getElementById(id).getBoundingClientRect().width);
+      });
+    }
+    store.setComparePreset('widest');
+    assertEqual(widths().join(','), '0,0,0,0', 'no controls on a preset');
+    assert(document.getElementById('compare-head-a').textContent.indexOf('Delaware') !== -1,
+      'and the header names the column instead');
+
+    store.setComparePreset('custom');
+    widths().forEach(function (w, i) {
+      assert(w > 0, ids[i] + ' should be visible on Custom');
+    });
+    assertEqual(document.getElementById('compare-head-a').textContent, '',
+      'and the static header steps aside');
+    store.setComparePreset('widest');
+  });
+
+  test('Custom opens on the pair the reader was just looking at', function () {
+    store.registerComparePresets(section4.PRESETS.filter(function (p) { return p.a; }));
+    store.setComparePreset('montana');
+    store.setComparePreset('custom');
+    assertEqual(document.getElementById('compare-state-a').value, 'Montana', 'A state');
+    assertEqual(document.getElementById('compare-year-a').value, '2010', 'A year');
+    assertEqual(document.getElementById('compare-year-b').value, '2020', 'B year');
+    store.setComparePreset('widest');
+  });
+
+  test("Custom keeps the reader's own pair once they have edited it", function () {
+    store.registerComparePresets(section4.PRESETS.filter(function (p) { return p.a; }));
+    store.setComparePreset('custom');
+    var a = document.getElementById('compare-state-a');
+    a.value = 'Texas';
+    a.dispatchEvent(new Event('change'));
+    store.setComparePreset('widest');
+    assertEqual(document.getElementById('compare-head-a').textContent,
+      'Delaware \u00b7 2020', 'the preset shows');
+    store.setComparePreset('custom');
+    assertEqual(document.getElementById('compare-state-a').value, 'Texas',
+      'and Texas came back');
+    store.setComparePreset('widest');
+  });
+
+  test('the custom controls follow the store and drive it', function () {
+    store.setComparePreset('custom');
+    store.setCompareA('Idaho');
+    assertEqual(document.getElementById('compare-state-a').value, 'Idaho', 'A follows');
+    var yb = document.getElementById('compare-year-b');
+    yb.value = '1950';
+    yb.dispatchEvent(new Event('change'));
+    assertEqual(store.get().compareYearB, 1950, 'B year drives');
+    store.setComparePreset('widest');
+  });
+
+  test('a pre-statehood year on one side still lets the other draw', function () {
+    store.setComparePreset('custom');
+    store.setCompareA('Alaska');
+    store.setCompareYearA(1920);
+    store.setCompareB('Montana');
+    store.setCompareYearB(2020);
+    assertEqual(document.getElementById('compare-gap-a').textContent,
+      'Alaska was not yet a state.', 'the gap says so');
+    assertEqual(document.getElementById('compare-count-a').textContent, '',
+      'and carries no figure');
+    assertEqual(document.querySelectorAll('#compare-grid-a .dot--on').length, 0,
+      'Alaska draws nothing');
+    assert(document.querySelectorAll('#compare-grid-b .dot--on').length > 0,
+      'Montana still draws');
+    store.setComparePreset('widest');
+  });
+
+  test('both columns the same never reads "1.00x as many"', function () {
+    store.setComparePreset('custom');
+    store.setCompareA('Ohio');
+    store.setCompareB('Ohio');
+    store.setCompareYearA(2020);
+    store.setCompareYearB(2020);
+    var spoken = section4.sentenceFor(records.recordFor('Ohio', 2020),
+                                      records.recordFor('Ohio', 2020));
+    assert(spoken.indexOf('1.00') === -1, 'got: ' + spoken);
+    store.setComparePreset('widest');
+  });
+
+  test('Custom announces the comparison, not a heading it does not have', function () {
+    store.setComparePreset('custom');
+    store.setCompareA('Delaware');
+    store.setCompareYearA(2020);
+    store.setCompareB('Montana');
+    store.setCompareYearB(2020);
+    document.getElementById('compare-live').textContent = '';
+    var a = document.getElementById('compare-state-a');
+    a.value = 'Wyoming';
+    a.dispatchEvent(new Event('change'));
+    var spoken = document.getElementById('compare-live').textContent;
+    assert(spoken.indexOf('Wyoming') !== -1, 'names the new state, got: ' + spoken);
+    assert(spoken.indexOf('Montana') !== -1, 'and the other, got: ' + spoken);
+    store.setComparePreset('widest');
+  });
+
+  // --- Task 4: the section driven by tabs ---
+
+  test('the tab strip carries the four presets', function () {
+    var labels = [].map.call(
+      document.querySelectorAll('#compare-tabs [role="tab"]'),
+      function (b) { return b.textContent; });
+    assertEqual(labels.join(' / '),
+      section4.PRESETS.map(function (p) { return p.label; }).join(' / '),
+      'labels in order');
+  });
+
+  test('choosing a tab redraws both columns and the heading', function () {
+    store.setComparePreset('montana');
+    assertEqual(document.getElementById('compare-head-a').textContent,
+      'Montana \u00b7 2010', 'A header');
+    assertEqual(document.getElementById('compare-head-b').textContent,
+      'Montana \u00b7 2020', 'B header');
+    assertEqual(document.getElementById('compare-headline').textContent,
+      section4.headingTextFor('montana'), 'heading');
+    store.setComparePreset('widest');
+    assertEqual(document.getElementById('compare-head-a').textContent,
+      'Delaware \u00b7 2020', 'A header after switching back');
+  });
+
+  test('a column header names its own state and year', function () {
+    // The Montana tab is unreadable without the year: both columns say
+    // Montana and only the year tells them apart.
+    store.setComparePreset('montana');
+    var a = document.getElementById('compare-head-a').textContent;
+    var b = document.getElementById('compare-head-b').textContent;
+    assert(a.indexOf('2010') !== -1 && b.indexOf('2020') !== -1,
+      'years distinguish the columns, got ' + a + ' / ' + b);
+  });
+
+  test('the per-representative count sits above the dots', function () {
+    store.setComparePreset('widest');
+    var count = document.getElementById('compare-count-a').getBoundingClientRect();
+    var grid = document.getElementById('compare-grid-a').getBoundingClientRect();
+    assert(count.bottom <= grid.top + 1,
+      'count bottom ' + Math.round(count.bottom) +
+      ' should precede grid top ' + Math.round(grid.top));
+  });
+
+  test('the count reads short, now that it is a caption', function () {
+    store.setComparePreset('widest');
+    assertEqual(document.getElementById('compare-count-a').textContent,
+      '990,837 per representative \u00b7 1 seat');
+    assertEqual(document.getElementById('compare-count-b').textContent,
+      '542,704 per representative \u00b7 2 seats');
+  });
+
+  test('the comparison slider is gone', function () {
+    ['compare-player', 'compare-slider', 'compare-prev', 'compare-next']
+      .forEach(function (id) {
+        assertEqual(document.getElementById(id), null, id + ' should be gone');
+      });
+  });
+
+  test('the superheading follows the tab', function () {
+    store.setComparePreset('widest');
+    assertEqual(document.getElementById('compare-lead').textContent,
+      'Where the gap is widest', 'preset lead');
+    store.setComparePreset('custom');
+    assertEqual(document.getElementById('compare-lead').textContent,
+      'Build your own', 'custom lead');
+    assertEqual(document.getElementById('compare-headline').textContent, '',
+      'and Custom carries no heading');
+    store.setComparePreset('widest');
+  });
+
+  test("the comparison is the tab strip's panel", function () {
+    store.setComparePreset('one-seat');
+    var panel = document.getElementById('compare-panel');
+    assertEqual(panel.getAttribute('role'), 'tabpanel', 'role');
+    var labelledby = panel.getAttribute('aria-labelledby');
+    assertEqual(document.getElementById(labelledby).getAttribute('aria-selected'),
+      'true', 'the panel should name the ACTIVE tab, and follow it');
+  });
+
+  test('changing tab announces the heading', function () {
+    // The heading rewrites below the strip rather than at it, so like
+    // Section 1's dropdown the change needs saying out loud.
+    store.setComparePreset('widest');
+    document.getElementById('compare-live').textContent = '';
+    document.getElementById('comparetab-montana').click();
+    assertEqual(document.getElementById('compare-live').textContent,
+      section4.headingTextFor('montana'), 'announced heading');
+    document.getElementById('comparetab-widest').click();
+  });
+
+  // --- Task 3: the presets and their headings ---
+
+  test('the presets are in tab order with their labels', function () {
+    assertEqual(section4.PRESETS.map(function (p) { return p.id; }).join(','),
+      'widest,one-seat,montana,custom', 'ids');
+    assertEqual(section4.PRESETS[0].label, '2020 \u2013 Delaware | Montana', 'tab 1');
+    assertEqual(section4.PRESETS[1].label, '2020 \u2013 Delaware | Wyoming', 'tab 2');
+    assertEqual(section4.PRESETS[2].label, '2010 \u2192 2020 \u2013 Montana', 'tab 3');
+    assertEqual(section4.PRESETS[3].label, 'Custom Comparison', 'tab 4');
+  });
+
+  test('only the value-bearing presets carry a pair', function () {
+    // The store is given values; Custom is editorial with none, and the
+    // filter lives at the call site so the store never learns the idea.
+    section4.PRESETS.slice(0, 3).forEach(function (p) {
+      assert(p.a && p.b, p.id + ' should carry a pair');
+    });
+    assertEqual(section4.PRESETS[3].a, undefined, 'Custom carries no pair');
+  });
+
+  test('each preset heading reads exactly as approved', function () {
+    assertEqual(section4.headingTextFor('widest'),
+      'Both Delaware & Montana hold about one million people, but Delaware gets one seat and Montana gets two.');
+    assertEqual(section4.headingTextFor('one-seat'),
+      'Both Delaware & Wyoming get one seat, despite Wyoming having 42% fewer people.');
+    assertEqual(section4.headingTextFor('montana'),
+      'In 2020 Montana gained a second seat. Each seat now represents 45% fewer people than it did the decade before.');
+    assertEqual(section4.headingTextFor('custom'), '', 'Custom has no heading');
+  });
+
+  test('the percentages are computed, not transcribed', function () {
+    // Wyoming 576,851 against Delaware 989,948 -> 41.7% -> "42%"
+    var de = records.recordFor('Delaware', 2020), wy = records.recordFor('Wyoming', 2020);
+    assertEqual(Math.round((1 - wy.population / de.population) * 100), 42, 'tab 2 figure');
+    // Montana 994,416 -> 542,704 -> 45.4% -> "45%"
+    var m10 = records.recordFor('Montana', 2010), m20 = records.recordFor('Montana', 2020);
+    assertEqual(Math.round((1 - m20.popPerRep / m10.popPerRep) * 100), 45, 'tab 3 figure');
+  });
+
+  test('the claims under the preset copy are true of the data', function () {
+    // "about one million" each, one seat against two
+    assertEqual(records.recordFor('Delaware', 2020).reps, 1, 'Delaware seats');
+    assertEqual(records.recordFor('Montana', 2020).reps, 2, 'Montana seats');
+    assert(Math.abs(records.recordFor('Delaware', 2020).population - 1e6) < 1.5e5,
+      'Delaware is about a million');
+    assert(Math.abs(records.recordFor('Montana', 2020).population - 1e6) < 1.5e5,
+      'Montana is about a million');
+    // "both get one seat"
+    assertEqual(records.recordFor('Wyoming', 2020).reps, 1, 'Wyoming seats');
+    // "gained a second seat" in 2020
+    assertEqual(records.recordFor('Montana', 2010).reps, 1, 'Montana had one in 2010');
+  });
+
+  test('the heading bolds its figures', function () {
+    var strongs = section4.headingPartsFor('one-seat')
+      .filter(function (p) { return p.strong; })
+      .map(function (p) { return p.strong; });
+    assert(strongs.indexOf('42%') !== -1,
+      'the percentage is bold, got ' + strongs.join('|'));
+    assertEqual(section4.headingPartsFor('custom').length, 0, 'Custom has no parts');
+  });
+
+  // --- Task 3: the comparison sentence ---
+
+  var section4 = window.Apportionment.section4;
+
+  function recAt(name, year) { return records.recordFor(name, year); }
+
+  test('names the larger figure first', function () {
+    // Delaware 990,837 vs Montana 542,704 -> 1.83x
+    assertEqual(section4.sentenceFor(recAt('Delaware', 2020), recAt('Montana', 2020)),
+      'In 2020, a representative spoke for 1.83\u00d7 as many people in Delaware as in Montana.',
+      'larger on the left');
+  });
+
+  test('still names the larger figure first when it is on the right', function () {
+    // The same pair, swapped. "0.55x as many" is arithmetic the reader has
+    // to invert; the sentence should read the same either way.
+    assertEqual(section4.sentenceFor(recAt('Montana', 2020), recAt('Delaware', 2020)),
+      'In 2020, a representative spoke for 1.83\u00d7 as many people in Delaware as in Montana.',
+      'larger on the right');
+  });
+
+  test('avoids reading "1.00x as many"', function () {
+    var a = { name: 'Alpha', year: 2020, reps: 1, popPerRep: 500000 };
+    var b = { name: 'Beta', year: 2020, reps: 1, popPerRep: 500001 };
+    assertEqual(section4.sentenceFor(a, b),
+      'In 2020, a representative spoke for almost exactly as many people in Beta as in Alpha.',
+      'effectively equal');
+  });
+
+  test('says so when both sides are the same state', function () {
+    assertEqual(section4.sentenceFor(recAt('Montana', 2020), recAt('Montana', 2020)),
+      "You're comparing Montana with itself.", 'same state');
+  });
+
+  test('says when one side was not yet a state', function () {
+    assertEqual(section4.sentenceFor(recAt('Alaska', 1930), recAt('Montana', 1930)),
+      'Alaska was not yet a state in 1930, so there is nothing to compare.', 'one gap');
+    assertEqual(section4.sentenceFor(recAt('Montana', 1930), recAt('Alaska', 1930)),
+      'Alaska was not yet a state in 1930, so there is nothing to compare.', 'gap on the right');
+  });
+
+  test('says when neither side was a state', function () {
+    assertEqual(section4.sentenceFor(recAt('Alaska', 1930), recAt('Hawaii', 1930)),
+      'Neither Alaska nor Hawaii was a state in 1930.', 'both gaps');
+  });
+
+  test('reports no ratio when either side lacks representatives', function () {
+    assertEqual(section4.ratioOf(recAt('Alaska', 1930), recAt('Montana', 1930)), null, 'gap');
+    assert(Math.abs(section4.ratioOf(recAt('Delaware', 2020), recAt('Montana', 2020)) - 1.8258) < 0.001,
+      'ratio value');
+  });
+
+  test('the parts join to exactly the sentence', function () {
+    // One source of truth: the bolded DOM and the plain string are built
+    // from the same list, so they cannot drift.
+    var parts = section4.partsFor(recAt('Delaware', 2020), recAt('Montana', 2020));
+    var joined = parts.map(function (p) { return p.text || p.strong; }).join('');
+    assertEqual(joined, section4.sentenceFor(recAt('Delaware', 2020), recAt('Montana', 2020)),
+      'parts vs sentence');
+    assertEqual(parts.filter(function (p) { return p.strong; }).length, 2,
+      'year and ratio are the bold parts');
+  });
+
+  // --- Task 4: the two grids ---
+
+  function litIn(id) {
+    return document.querySelectorAll('#' + id + ' .dot--on').length;
+  }
+
+  test('both grids draw their own state for the year', function () {
+    store.setCompareA('Delaware');
+    store.setCompareB('Montana');
+    store.setCompareYearA(2020);
+    store.setCompareYearB(2020);
+    // 99.08 and 54.27 dots render as 100 and 55 lit elements.
+    assertEqual(litIn('compare-grid-a'), 100, 'Delaware 2020');
+    assertEqual(litIn('compare-grid-b'), 55, 'Montana 2020');
+  });
+
+  test('a gap on one side still renders the other', function () {
+    store.setCompareA('Alaska');
+    store.setCompareB('Montana');
+    store.setCompareYearA(1930);
+    store.setCompareYearB(1930);
+    assertEqual(litIn('compare-grid-a'), 0, 'Alaska has no dots in 1930');
+    assert(litIn('compare-grid-b') > 0, 'Montana must still draw');
+    assert(document.getElementById('compare-gap-a').textContent.length > 0,
+      'Alaska should say why it is empty');
+    assertEqual(document.getElementById('compare-gap-b').textContent, '',
+      'Montana has nothing to explain');
+  });
+
+  test('both grids reserve the same height, gap year included', function () {
+    // A difference between the two frames would read as a difference in
+    // the data.
+    store.setCompareA('Alaska');
+    store.setCompareB('Montana');
+    store.setCompareYearA(1930);
+    store.setCompareYearB(1930);
+    var a = document.getElementById('compare-grid-a');
+    var b = document.getElementById('compare-grid-b');
+    assertEqual(a.style.height, b.style.height, 'reserved height');
+    assert(a.style.height !== '' && a.style.height !== '0px', 'height is set');
+  });
+
+  test('both grids use the same dot size', function () {
+    store.setCompareA('Delaware');
+    store.setCompareB('Montana');
+    store.setCompareYearA(2020);
+    store.setCompareYearB(2020);
+    var a = getComputedStyle(document.querySelector('#compare-grid-a .dot')).width;
+    var b = getComputedStyle(document.querySelector('#compare-grid-b .dot')).width;
+    assertEqual(a, b, 'dot width');
+  });
+
+  test('the headline renders the preset heading with its numbers bold', function () {
+    // It used to carry the generic ratio sentence. The preset's own
+    // argument replaced it; what still has to hold is that the figures
+    // get their own elements rather than being baked into one string.
+    store.setComparePreset('one-seat');
+    var host = document.getElementById('compare-headline');
+    assertEqual(host.textContent.trim(), section4.headingTextFor('one-seat'), 'text');
+    var bold = [].map.call(host.querySelectorAll('strong'),
+      function (el) { return el.textContent; });
+    assertEqual(bold.join(','), 'one,42%', 'bold parts');
+    store.setComparePreset('widest');
+  });
+
+  // --- Review fixes ---
+
+  test('every dot stage restores its height after a resize', async function () {
+    // Two sections write an inline stage height derived from tokens that
+    // change at the 30rem breakpoint, across four stages. Three separate
+    // instances of this bug had to be caught by review; this pins every
+    // stage at once so the next one is caught by the suite instead.
+    // ANY NEW SECTION THAT RESERVES AN INLINE STAGE HEIGHT GOES IN ids.
+    app.select('New York');
+    store.setCompareA('Montana');
+    store.setCompareB('Delaware');
+    store.setCompareYearA(2010);
+    store.setCompareYearB(2010);
+
+    var ids = ['grid-stage', 'timeline-stage', 'compare-grid-a', 'compare-grid-b'];
+    var correct = {};
+    ids.forEach(function (id) { correct[id] = document.getElementById(id).style.height; });
+    ids.forEach(function (id) { document.getElementById(id).style.height = '10px'; });
+
+    window.dispatchEvent(new Event('resize'));
+    await nextFrame();
+
+    ids.forEach(function (id) {
+      assertEqual(document.getElementById(id).style.height, correct[id], id);
+    });
+  });
+
+  test('each section is an addressable named region', function () {
+    ['section-1', 'section-2', 'section-3', 'section-4'].forEach(function (id) {
+      var section = document.getElementById(id);
+      var labelledby = section.getAttribute('aria-labelledby');
+      assert(labelledby, id + ' needs aria-labelledby so AT can tell the regions apart');
+      var heading = document.getElementById(labelledby);
+      assert(heading && heading.textContent.trim().length > 0,
+        id + ' points at a missing or empty heading');
+    });
+  });
+
+  test('only the annotated timeline reserves space for an annotation', function () {
+    // The bottom margin that clears Section 2's 1920 note is scoped to
+    // #player, not .player, so a second timeline would not inherit dead
+    // space. There is only one on the page now, so the comparison is
+    // against a bare .player built here rather than against Section 4's.
+    var annotated = parseFloat(getComputedStyle(document.getElementById('player')).marginBottom);
+    var bare = document.createElement('div');
+    bare.className = 'player';
+    document.getElementById('sandbox').appendChild(bare);
+    var plain = parseFloat(getComputedStyle(bare).marginBottom);
+    bare.remove();
+    assert(annotated > plain + 40,
+      'Section 2 should clear its annotation: ' + annotated + ' vs ' + plain);
+    assert(plain < 60, 'an unannotated timeline should reserve nothing, got ' + plain);
+  });
+
+  // --- Styling pass: copy ---
+
+  function headlineText(id) {
+    var out = '';
+    Array.prototype.forEach.call(document.getElementById(id).childNodes, function (node) {
+      if (node.nodeName === 'SELECT') { out += node.value; return; }
+      if (node.nodeType === 1 && node.classList.contains('visually-hidden')) return;
+      out += node.textContent;
+    });
+    return out.replace(/\s+/g, ' ').trim();
+  }
+
+  test("Section 2 reads 'Starting in' for a past census", function () {
+    store.setStateName('New York');
+    store.setYear(1950);
+    assertEqual(headlineText('timeline-headline'),
+      'Starting in 1950, New York had 43 representatives — 344,888 people each.',
+      'past census');
+  });
+
+  test('2020 reads as current, not past', function () {
+    store.setStateName('New York');
+    store.setYear(2020);
+    var text = headlineText('timeline-headline');
+    assert(text.indexOf(' has 26') !== -1, 'present tense, got: ' + text);
+    assert(text.indexOf(' had ') === -1, 'the latest census is not history: ' + text);
+    assert(text.indexOf('until the next census') !== -1, 'got: ' + text);
+    assert(text.indexOf('777,529 people each') !== -1, 'got: ' + text);
+  });
+
+  test('Section 2 still handles a pre-statehood year', function () {
+    store.setStateName('Alaska');
+    store.setYear(1930);
+    assertEqual(headlineText('timeline-headline'),
+      'In 1930, Alaska was not yet a state.', 'gap year');
+  });
+
+  test('the 1920 note reads as a sentence about the freeze', function () {
+    assertEqual(document.querySelector('.player__mark-note').textContent.trim(),
+      'In 1920, the number of representatives was fixed to 435.', 'note text');
+  });
+
+  test('Section 3 drops the redundant dropdown labels', function () {
+    assertEqual(document.querySelectorAll('.compare__label').length, 0,
+      '"First state" / "Second state" add nothing above a state dropdown');
+  });
+
+  test('Section 3 bolds the representative count under each grid', function () {
+    store.setCompareA('Delaware');
+    store.setCompareB('Montana');
+    store.setCompareYearA(2020);
+    store.setCompareYearB(2020);
+    var a = document.getElementById('compare-count-a');
+    assertEqual(a.querySelectorAll('strong').length, 1, 'one bold part');
+    assertEqual(a.querySelector('strong').textContent, '1', 'Delaware rep count');
+    assertEqual(document.getElementById('compare-count-b').querySelector('strong').textContent,
+      '2', 'Montana rep count');
+  });
+
+  test('supportive text is larger than it was', function () {
+    // 0.85rem was 13.6px and read as fine print.
+    var size = parseFloat(getComputedStyle(document.querySelector('.note')).fontSize);
+    assert(size >= 15, 'supportive text should be at least 15px, got ' + size);
+  });
+
+  // --- Styling pass: layout ---
+
+  test('whole sections stack; the headline no longer pins on its own', function () {
+    ['section-1', 'section-2', 'section-3', 'section-4'].forEach(function (id) {
+      var section = document.getElementById(id);
+      var styles = getComputedStyle(section);
+      assertEqual(styles.position, 'sticky', id + ' should pin as a whole');
+      assertEqual(styles.top, '0px', id + ' pins its top');
+      // Sections now floor at 100vh, so the rendered box is the viewport's
+      // height and says nothing about whether the CONTENT fits. The gate
+      // (min-height: 52rem) was chosen to exceed the tallest section's
+      // content; measure that by dropping the floor, not the painted box.
+      var floor = section.style.minHeight;
+      section.style.minHeight = '0';
+      var content = section.getBoundingClientRect().height;
+      section.style.minHeight = floor;
+      assert(content <= 832,
+        id + ' holds more content than the sticky gate admits: ' +
+        Math.round(content) + 'px against an 832px gate');
+      // The divider has no controls, so it has no pinned wrapper either.
+      var inner = document.querySelector('#' + id + ' .section__pinned');
+      if (inner) {
+        assertEqual(getComputedStyle(inner).position, 'static',
+          id + ' headline should no longer pin separately');
+      }
+    });
+  });
+
+  // --- General pass ---
+
+  test('every section but the closing floors at the screen height', function () {
+    // Short sections used to end wherever their content did, so a state
+    // with three representatives left a ragged half-empty card in a
+    // layout whose whole premise is one full screen per idea.
+    ['section-1', 'section-2', 'section-3', 'section-4'].forEach(function (id) {
+      var section = document.getElementById(id);
+      var floor = parseFloat(getComputedStyle(section).minHeight);
+      assert(floor >= window.innerHeight - 1,
+        id + ' floors at ' + Math.round(floor) + 'px, under the ' +
+        window.innerHeight + 'px viewport');
+    });
+  });
+
+  test('the closing is exempt from the screen-height floor', function () {
+    // It carries one sentence and a source link. A full screen of it is
+    // a full screen of nothing.
+    var closing = document.getElementById('section-5');
+    var floor = parseFloat(getComputedStyle(closing).minHeight) || 0;
+    assert(floor < window.innerHeight,
+      'the closing should not be forced to a full screen, floors at ' +
+      Math.round(floor) + 'px');
+  });
+
+  test('state dropdowns carry their wash without being focused', function () {
+    // The wash marked the focused control only, so at rest the dropdowns
+    // read as plain underlined text and a reader had to discover they
+    // were controls at all.
+    var ids = ['state-select', 'timeline-state', 'compare-state-a',
+               'compare-year-a', 'compare-state-b', 'compare-year-b'];
+    ids.forEach(function (id) {
+      var bg = getComputedStyle(document.getElementById(id)).backgroundColor;
+      assert(bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)',
+        id + ' has no resting background, got ' + bg);
+    });
+  });
+
+  // --- Cover ---
+
+  test('the cover drops the sentence that pre-empted the whole piece', function () {
+    // "Every representative speaks for more people than they did a century
+    // ago, and the gap between states has only widened" states both of the
+    // findings the sections are built to let a reader discover.
+    var sub = document.querySelector('.cover__sub').textContent;
+    assert(sub.indexOf('Every representative speaks for') === -1,
+      'the cover still gives away the conclusion');
+    assert(sub.indexOf('gap between states has only widened') === -1,
+      'the cover still gives away the second conclusion');
+    // The setup it hands over to must survive.
+    assert(sub.indexOf('435 seats since 1920') !== -1, 'lost the 1920 setup');
+    assert(sub.indexOf('331 million now') !== -1, 'lost the present-day figure');
+  });
+
+  test('the cover lead names the span the piece covers', function () {
+    assertEqual(document.querySelector('.cover__lead').textContent.trim(),
+      "Let's explore how representation has changed in the last 100+ years.",
+      'cover lead copy');
+  });
+
+  test('the cover body breaks as two lines and the lead holds one', function () {
+    // At the old 34rem the body ran three lines and the lead broke after
+    // "100+", leaving "years." alone. Both are a measure problem, not a
+    // copy problem. The band that holds this is 36rem to 46rem; 40rem
+    // sits mid-band so a font change does not flip it back.
+    // Width-dependent by nature: this asserts the desktop measure, which
+    // is where the break was asked for.
+    function lineCount(rects) {
+      var tops = {};
+      [].forEach.call(rects, function (r) {
+        if (r.width > 0) tops[Math.round(r.top)] = 1;
+      });
+      return Object.keys(tops).length;
+    }
+    var sub = document.querySelector('.cover__sub');
+    var lead = document.querySelector('.cover__lead');
+    var body = document.createRange();
+    body.setStart(sub.firstChild, 0);
+    body.setEnd(lead, 0);
+    assertEqual(lineCount(body.getClientRects()), 2,
+      'the cover body should break as two lines');
+    var leadRange = document.createRange();
+    leadRange.selectNodeContents(lead);
+    assertEqual(lineCount(leadRange.getClientRects()), 1,
+      'the cover lead should hold one line');
+  });
+
+  test('the headline stands off from the body copy', function () {
+    var gap = parseFloat(getComputedStyle(
+      document.querySelector('.cover__headline')).marginBottom);
+    assert(gap >= 36, 'headline sits ' + gap + 'px off the body copy');
+  });
+
+  test('the scroll cue is an arrow, not the word', function () {
+    var cue = document.querySelector('.cover__scroll');
+    assertEqual(cue.textContent.trim(), '', 'the cue should carry no text');
+    assert(cue.querySelector('svg'), 'the cue should carry an arrow');
+    assertEqual(cue.getAttribute('aria-hidden'), 'true',
+      'the cue is decoration and stays out of the accessibility tree');
+  });
+
+  test('the cover animation cannot strand its content invisible', function () {
+    // The entrance fades from opacity 0. If the animation never runs --
+    // fill-mode dropped, keyframes renamed, a reader who asked for reduced
+    // motion -- the resting style has to be the VISIBLE one, or the cover
+    // is a blank screen.
+    ['.cover__headline', '.cover__sub', '.cover__scroll'].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      var styles = getComputedStyle(el);
+      assert(styles.animationName !== 'none',
+        sel + ' has no entrance animation');
+      assertEqual(styles.animationFillMode, 'both',
+        sel + ' must hold its keyframed state before and after it runs');
+      // Strip the animation and the element must still be fully there.
+      var was = el.style.animation;
+      el.style.animation = 'none';
+      assertEqual(getComputedStyle(el).opacity, '1',
+        sel + ' is invisible without its animation');
+      el.style.animation = was;
+    });
+  });
+
+  test('the body copy waits for the headline to finish', function () {
+    function ms(value) {
+      return value.indexOf('ms') !== -1 ? parseFloat(value)
+        : parseFloat(value) * 1000;
+    }
+    var head = getComputedStyle(document.querySelector('.cover__headline'));
+    var sub = getComputedStyle(document.querySelector('.cover__sub'));
+    var headEnds = ms(head.animationDelay) + ms(head.animationDuration);
+    assert(ms(sub.animationDelay) >= headEnds,
+      'the body copy starts at ' + ms(sub.animationDelay) +
+      'ms, before the headline finishes at ' + headEnds + 'ms');
+  });
+
+  test('the headline arrives by moving down into place', function () {
+    // Asked for specifically: it starts a little high and settles, rather
+    // than rising from below like the sections do.
+    var name = getComputedStyle(document.querySelector('.cover__headline')).animationName;
+    assertEqual(name, 'cover-rise', 'headline keyframes');
+  });
+
+  test('the cover carries the dropdown wash as its ground', function () {
+    var cover = getComputedStyle(document.querySelector('.cover')).backgroundColor;
+    var select = getComputedStyle(document.getElementById('state-select')).backgroundColor;
+    // The select's wash is translucent; the cover must be the same colour
+    // composited, because a translucent cover would pick up the dark body
+    // behind it instead of paper.
+    var m = select.match(/[\d.]+/g).map(Number);
+    var over = [251, 250, 247].map(function (base, i) {
+      return Math.round(m[3] * m[i] + (1 - m[3]) * base);
+    });
+    assertEqual(cover, 'rgb(' + over.join(', ') + ')',
+      'the cover should be the dropdown wash over paper');
+  });
+
+  test('the dropdown wash hugs its value, not the longest state name', function () {
+    // A native select sizes to its longest option. Harmless while the
+    // background was transparent; once the wash is always on, a short
+    // state left a long empty highlight trailing off into the sentence.
+    // Firefox has no field-sizing and keeps the wide box — the wash is
+    // still correct there, just roomier.
+    if (!window.CSS || !CSS.supports('field-sizing', 'content')) return;
+    var select = document.getElementById('state-select');
+    assertEqual(getComputedStyle(select).fieldSizing, 'content',
+      'the state dropdown should size to its content');
+  });
+
+  test('the slider track takes no fill when focus lands in it', function () {
+    // The wash and its 6px halo bloomed a soft red blob around the whole
+    // track. The thumb ring carries the indicator instead, so this has to
+    // be measured with focus actually inside the track.
+    document.querySelectorAll('[data-yearpicker="slider"]').forEach(function (slider) {
+      var track = slider.closest('.player__track');
+      slider.focus();
+      assert(track.matches(':focus-within'),
+        'focus did not land in the track for ' + slider.id);
+      var styles = getComputedStyle(track);
+      var bg = styles.backgroundColor;
+      assert(bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)',
+        slider.id + "'s track should stay unfilled when focused, got " + bg);
+      assertEqual(styles.boxShadow, 'none',
+        slider.id + "'s track should cast no halo when focused");
+      slider.blur();
+    });
+  });
+
+  test('sections are siblings, so sticky has room to work', function () {
+    // A sticky element can only move within its containing block. Wrapping
+    // each section in a box its own height leaves zero slack and sticky
+    // never engages — the sections must share one tall parent.
+    var ids = ['section-1', 'section-2', 'section-3', 'section-4'];
+    var parent = document.getElementById(ids[0]).parentElement;
+    ids.forEach(function (id) {
+      assertEqual(document.getElementById(id).parentElement, parent,
+        id + ' should share one parent with its neighbours');
+    });
+    assert(parent.getBoundingClientRect().height >
+      document.getElementById('section-1').getBoundingClientRect().height,
+      'the parent must be taller than one section or there is no slack');
+  });
+
+  test('sections are opaque and tinted apart from their neighbours', function () {
+    var seen = [];
+    ['section-1', 'section-2', 'section-3', 'section-4'].forEach(function (id) {
+      var bg = getComputedStyle(document.getElementById(id)).backgroundColor;
+      assert(bg !== 'rgba(0, 0, 0, 0)',
+        id + ' must be opaque or the section beneath shows through');
+      assert(seen.indexOf(bg) === -1, id + ' repeats a neighbour tint: ' + bg);
+      seen.push(bg);
+    });
+  });
+
+  test('a later section paints over an earlier one', function () {
+    // Source order decides: both are positioned with auto z-index, so the
+    // later section covers the earlier as it slides up.
+    var one = document.getElementById('section-1');
+    var two = document.getElementById('section-2');
+    assert(!!(one.compareDocumentPosition(two) & Node.DOCUMENT_POSITION_FOLLOWING),
+      'section-2 must come after section-1 in the document');
+    assertEqual(getComputedStyle(two).zIndex, 'auto',
+      'no explicit z-index needed; raising one would invert the stack');
+  });
+
+  // --- Small fixes ---
+
+  test('the latest census keeps the state in the same place', function () {
+    store.setStateName('New York');
+    store.setYear(2020);
+    assertEqual(headlineText('timeline-headline'),
+      'Starting in 2020, New York has 26 representatives until the next census — 777,529 people each.',
+      '2020 leads with the year like every other census');
+  });
+
+  test('past censuses still read "had"', function () {
+    store.setStateName('New York');
+    store.setYear(1950);
+    var text = headlineText('timeline-headline');
+    assert(text.indexOf('had 43') !== -1, 'got: ' + text);
+    assert(text.indexOf('until the next census') === -1,
+      'only the latest census is still running');
+  });
+
+  test('the chevrons line up with the slider bar', function () {
+    [['year-prev', 'year-slider']].forEach(function (pair) {
+      var button = document.getElementById(pair[0]).getBoundingClientRect();
+      var slider = document.getElementById(pair[1]).getBoundingClientRect();
+      var dy = Math.abs((button.top + button.height / 2) - (slider.top + slider.height / 2));
+      assert(dy <= 2, pair[0] + ' centre is ' + Math.round(dy) + 'px off the bar');
+    });
+  });
+
+  test('the closing sits on the key pill\'s baseline', function () {
+    // Asked for: at the foot of the page the source line should read as
+    // part of the same band as the fixed key, not float above it.
+    // Equal bottom padding plus an equal bottom offset puts the closing's
+    // LAST line and the pill's single line the same distance up from the
+    // same edge, which is baseline alignment without measuring anything.
+    var key = getComputedStyle(document.getElementById('key'));
+    var closing = getComputedStyle(document.getElementById('section-5'));
+    var footer = getComputedStyle(document.querySelector('.closing-footer'));
+    assertEqual(closing.paddingBottom, key.paddingBottom,
+      'the closing and the pill should share a bottom padding');
+    assertEqual(footer.paddingBottom, key.bottom,
+      'and the footer should hold the closing the same distance off the ' +
+      'page foot as the pill sits off the viewport');
+  });
+
+  test('the closing copy is measured to clear the key pill', function () {
+    // They share a band now, so a line long enough to reach the pill runs
+    // under it. The clearance itself cannot be measured here — #sandbox
+    // is parked at left:-9999px while the pill is fixed to the viewport,
+    // so their rects are not comparable. What is checkable is the cap
+    // that creates the clearance: the closing must NOT inherit the 60rem
+    // reading column every other section's children get, or at 1280px it
+    // runs to within 2px of the pill. The real clearance is checked with
+    // tools/drive.mjs.
+    var note = document.querySelector('#section-5 .note');
+    var reserved = parseFloat(getComputedStyle(note).paddingRight);
+    var pill = document.getElementById('key').getBoundingClientRect().width;
+    assert(reserved >= pill,
+      'the closing reserves ' + reserved + 'px for a pill ' +
+      Math.round(pill) + 'px wide');
+  });
+
+  test('the closing section scrolls normally and carries only the source', function () {
+    var section = document.getElementById('section-5');
+    // Outside <main>, or it shares the sticky sections' containing block:
+    // they stay pinned over it, and because it is unpositioned it paints
+    // *beneath* them and never appears at all.
+    assertEqual(section.closest('main'), null,
+      'the closing must sit outside the stack');
+    assert(document.querySelector('main #section-4') !== null,
+      'the stacking sections should still be inside <main>');
+    assertEqual(getComputedStyle(section).position, 'static',
+      'the closing section should not pin');
+    assertEqual(section.querySelectorAll('.closing').length, 0,
+      'the closing headline is gone');
+    var link = section.querySelector('a');
+    assert(link !== null, 'the data source link must remain');
+    assert(link.getAttribute('href').indexOf('census.gov') !== -1,
+      'got: ' + link.getAttribute('href'));
+  });
+
+  // --- Task 1: renumbering ---
+
+  test('every section id and region label still resolves', function () {
+    // After renumbering, a stale reference is a section that silently
+    // loses its tint or its accessible name.
+    ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(function (id) {
+      var section = document.getElementById(id);
+      assert(section !== null, id + ' should exist');
+      var labelledby = section.getAttribute('aria-labelledby');
+      assert(labelledby, id + ' needs aria-labelledby');
+      assert(document.getElementById(labelledby) !== null,
+        id + ' points at a missing heading: ' + labelledby);
+    });
+  });
+
+  test('the two-state comparison kept its whole surface under its new name', function () {
+    var s4 = window.Apportionment.section4;
+    assert(s4, 'Apportionment.section4 should exist');
+    ['init', 'render', 'relayout', 'ratioOf', 'partsFor', 'sentenceFor']
+      .forEach(function (key) {
+        assertEqual(typeof s4[key], 'function', 'section4.' + key);
+      });
+    // Behaviour, not just shape: the same input gives the same sentence.
+    assertEqual(s4.sentenceFor(records.recordFor('Delaware', 2020),
+                               records.recordFor('Montana', 2020)),
+      'In 2020, a representative spoke for 1.83× as many people in Delaware as in Montana.',
+      'unchanged by the rename');
+  });
+
+  // --- The divider ---
+
+  test('the divider carries no controls and no dots', function () {
+    // It replaced the one-state-two-years comparison. Anything
+    // interactive left behind would be a control with nothing wired to
+    // it, and a stage with nothing to render into it.
+    var divider = document.getElementById('section-3');
+    assert(divider.classList.contains('section--divider'), 'divider class');
+    assertEqual(divider.querySelectorAll('select, input, button').length, 0,
+      'the divider should hold no controls');
+    assertEqual(divider.querySelectorAll('.grid-stage, .cluster').length, 0,
+      'the divider should hold no dot stages');
+  });
+
+  test('the divider sits in the same column as every other section', function () {
+    // .section > * carries margin-left/right: auto for the reading
+    // column. The divider is a flex container, and in flex layout an auto
+    // cross-axis margin beats align-items: stretch -- so its inner box
+    // shrank to its content and centred itself, while every other
+    // section's copy starts hard left. Same family as the margin
+    // shorthand trap, different disguise.
+    var headline = document.querySelector('#section-1 .headline');
+    var lead = document.querySelector('#section-3 .divider__lead');
+    var delta = Math.abs(lead.getBoundingClientRect().left -
+                         headline.getBoundingClientRect().left);
+    assert(delta <= 1,
+      'the divider starts ' + Math.round(delta) +
+      'px off the column every other section uses');
+  });
+
+  test('the divider starts at the top, like every other section', function () {
+    // It was centred in its own screen. Every other section opens at the
+    // section's top padding, so a centred one read as a different kind of
+    // page rather than a beat in the same one.
+    function offset(sectionId, sel) {
+      var section = document.getElementById(sectionId);
+      var el = section.querySelector(sel);
+      return el.getBoundingClientRect().top - section.getBoundingClientRect().top;
+    }
+    var delta = Math.abs(offset('section-3', '.divider__lead') -
+                         offset('section-1', '.headline'));
+    assert(delta <= 1,
+      'the divider opens ' + Math.round(delta) +
+      'px off where the other sections open');
+  });
+
+  test('the divider states the cause and the shape of the gap', function () {
+    // The paragraph, not the section: the section also holds a
+    // visually-hidden <h2> carrying its accessible name.
+    var text = document.querySelector('#section-3 .divider__lead').textContent
+      .replace(/\s+/g, ' ').trim();
+    assertEqual(text,
+      'Since the total number of House seats was fixed in 1920, representation ' +
+      'has grown uneven. The widest gaps are between states of nearly ' +
+      'the same size.');
+  });
+
+  test('the divider is set at the same size as every other headline', function () {
+    // Asked for: it is a heading, not body copy with a heading's job.
+    var divider = getComputedStyle(
+      document.querySelector('#section-3 .divider__lead')).fontSize;
+    var headline = getComputedStyle(
+      document.querySelector('#section-1 .headline')).fontSize;
+    assertEqual(divider, headline, 'divider against section headline');
+  });
+
+  test('the divider carries one block, not a lead and a body', function () {
+    assertEqual(document.querySelectorAll('#section-3 .divider__body').length, 0,
+      'the second paragraph went with the rewrite');
+    assertEqual(document.querySelectorAll('#section-3 p').length, 1,
+      'one paragraph');
+  });
+
+  test('the divider does not claim the gap tracks state size', function () {
+    // It does not: correlation between a state's population and its
+    // people-per-representative is +0.12 in 2020, the six largest states
+    // sit within 1.03x of each other, and the widest gap in the country
+    // is Delaware against Montana -- both about a million people.
+    var text = document.getElementById('section-3').textContent;
+    assert(!/more popul(ous|us) states have less representation/i.test(text),
+      'the divider is asserting something the data contradicts');
+
+    var worst = null, best = null, biggest = [];
+    window.Apportionment.data.stateNames.forEach(function (name) {
+      var r = records.recordFor(name, 2020);
+      if (!records.hasReps(r)) return;
+      if (!worst || r.popPerRep > worst.popPerRep) worst = r;
+      if (!best || r.popPerRep < best.popPerRep) best = r;
+      biggest.push(r);
+    });
+    assertEqual(worst.name, 'Delaware', 'heaviest load');
+    assertEqual(best.name, 'Montana', 'lightest load');
+
+    // Both are small states, which is the whole point of the paragraph.
+    biggest.sort(function (a, b) { return b.population - a.population; });
+    var top = biggest.slice(0, 6).map(function (r) { return r.popPerRep; });
+    var spread = Math.max.apply(null, top) / Math.min.apply(null, top);
+    assert(spread < 1.1,
+      'the largest states should cluster, spread was ' + spread.toFixed(2) + 'x');
+    assert(worst.popPerRep / best.popPerRep > spread,
+      'the widest gap should exceed the spread among the largest states');
+  });
+
+  test('nothing is left wired to the section that went away', function () {
+    assertEqual(window.Apportionment.section3, undefined,
+      'Apportionment.section3 should be gone, not an empty shell');
+    ['span-state', 'span-year-from', 'span-year-to', 'span-headline',
+     'span-grid-from', 'span-grid-to', 'span-live'].forEach(function (id) {
+      assertEqual(document.getElementById(id), null, id + ' should be gone');
+    });
+    ['setSpanState', 'setSpanFrom', 'setSpanTo', 'detachSpan']
+      .forEach(function (key) {
+        assertEqual(typeof store[key], 'undefined',
+          'store.' + key + ' has no caller left');
+      });
+  });
+
+  // --- Review fixes ---
+
+  test('every state dropdown has an accessible name, and they differ', function () {
+    // The styling pass removed Section 4's "First state"/"Second state"
+    // labels and nothing replaced them, leaving two controls a screen
+    // reader announces as just "combo box".
+    function nameOf(id) {
+      var el = document.getElementById(id);
+      if (!el) return null;
+      if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
+      var label = document.querySelector('label[for="' + id + '"]');
+      return label ? label.textContent.trim() : null;
+    }
+    var ids = ['state-select', 'timeline-state', 'compare-state-a',
+               'compare-year-a', 'compare-state-b', 'compare-year-b'];
+    var seen = [];
+    ids.forEach(function (id) {
+      var name = nameOf(id);
+      assert(name && name.length > 0, id + ' has no accessible name');
+      assert(seen.indexOf(name) === -1,
+        id + ' repeats the name "' + name + '" — a reader moving by control ' +
+        'hears it twice with nothing to tell them apart');
+      seen.push(name);
+    });
+  });
+
+  runQueue();
+
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runTests);
+  } else {
+    runTests();
+  }
+</script>

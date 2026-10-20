@@ -1,0 +1,1058 @@
+/* Design tokens. Every later section reads these; nothing hardcodes a
+   dot size or colour of its own. */
+:root {
+  --paper: #fbfaf7;
+  --ink: #16160f;
+  --ink-soft: #5c5c52;
+  --accent: #b4441f;
+
+  --accent-dark: #8c3416;
+  --accent-wash: rgba(180, 68, 31, 0.08);
+  --accent-wash-strong: rgba(180, 68, 31, 0.18);
+  /* --accent-wash composited over --paper. The cover needs the dropdown
+     highlight as an OPAQUE ground: translucent, it would pick up the dark
+     #ece7db body behind it and go muddy. Recompute both together. */
+  --accent-wash-opaque: #f5ebe6;
+
+  --dot-color: var(--accent);
+  --dot-empty: rgba(180, 68, 31, 0.16);
+
+  /* State B is the layout ground truth: dots are always laid out at this
+     size, and State A scales the cluster up visually. Nothing in the
+     transition touches layout. */
+  --dot-size: 5px;
+  --dot-gap: 3px;
+  --single-scale: 4;
+
+  /* How long a cluster takes to fly between the two views. Read by
+     js/section1.js as well, to work out when the fan has finished and
+     the gain note may arrive — change it here and both follow. */
+  --fan-duration: 600ms;
+
+  /* The cover's measure, and tuned to it: at 34rem the body ran three
+     lines and the lead broke "100+ / years." apart. Two lines and one
+     hold anywhere from 36rem to 46rem; this sits mid-band. Past 48rem
+     the headline collapses to two lines as well, which is a different
+     decision. */
+  --measure: 40rem;
+}
+
+* { box-sizing: border-box; }
+
+/* No focus ring anywhere — on this control or any added later. Keyboard
+   focus is still shown, but as a change of fill rather than an outline,
+   so it reads as emphasis instead of a border.
+   ANY NEW CONTROL MUST DEFINE ITS OWN :focus-visible FILL. Without one it
+   inherits this rule and becomes invisible to keyboard navigation. */
+:focus-visible { outline: none; }
+
+body {
+  margin: 0;
+  /* Matches the closing footer so no paper strip shows beneath it. */
+  background: #ece7db;
+  color: var(--ink);
+  font: 1rem/1.6 Georgia, "Iowan Old Style", "Times New Roman", serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Dot primitives. The 10-column rule lives here and nowhere else. --- */
+
+.cluster {
+  display: grid;
+  grid-template-columns: repeat(10, var(--dot-size));
+  gap: var(--dot-gap);
+  width: max-content;
+}
+
+.dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: var(--dot-color);
+}
+
+.dot--partial {
+  background: conic-gradient(
+    var(--dot-color) 0 var(--fill),
+    var(--dot-empty) var(--fill) 100%
+  );
+}
+
+/* --- Cover --- */
+
+.cover {
+  background: var(--accent-wash-opaque);
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.cover__inner { max-width: var(--measure); }
+
+.cover__headline {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  /* The headline is the only thing on screen for 760ms before the body
+     fades in under it; it needs room to read as its own beat. */
+  margin: 0 0 2.5rem;
+}
+
+.cover__sub {
+  font-size: clamp(1rem, 1.6vw, 1.175rem);
+  color: var(--ink-soft);
+  margin: 0 0 3rem;
+}
+
+/* Fixed, because the unit is the contract every section depends on: the
+   reader needs it wherever they are, not only on the cover. */
+.key {
+  /* Fixed and opaque, so it sits over the reading column at most widths.
+     Clicks must pass through to the controls beneath it. */
+  pointer-events: none;
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem 0.6rem 0.85rem;
+  background: var(--paper);
+  border: 1px solid rgba(22, 22, 15, 0.14);
+  border-radius: 999px;
+}
+
+@media (max-width: 30rem) {
+  .key {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    padding: 0.45rem 0.8rem 0.45rem 0.65rem;
+  }
+}
+
+/* The swatch is a real one-dot grid from the renderer, scaled to match
+   what Section 1 shows, so the key can never describe something the page
+   does not draw. */
+.key__swatch {
+  width: calc(var(--dot-size) * var(--single-scale));
+  height: calc(var(--dot-size) * var(--single-scale));
+  display: grid;
+  place-items: center;
+}
+
+/* Two corrections to the shared .cluster rules, both specific to a grid
+   holding a single dot:
+   1. Collapse to one column. Every real grid holds 54 dots or more and
+      wants all ten, but ten tracks around one dot reserve 77px of empty
+      space and shove the label away from it.
+   2. Scale the cluster, not the swatch. Scaling the swatch would blow its
+      visual box up to four times the space layout reserves, and the
+      invisible overhang would push the label away too. */
+.key__swatch .cluster {
+  grid-template-columns: var(--dot-size);
+  transform: scale(var(--single-scale));
+  transform-origin: center;
+}
+
+.key__label {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+
+/* Was the word "Scroll". An arrow says the same thing without reading as
+   an instruction, and without needing translation. */
+.cover__scroll {
+  position: absolute;
+  bottom: 1.5rem;
+  margin: 0;
+  line-height: 0;
+  color: var(--ink-soft);
+}
+
+.cover__scroll svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- Cover entrance ---
+   The headline settles DOWNWARD into place, against the convention of
+   rising from below, so it reads as the page coming to rest rather than
+   as another scroll-driven reveal. Body copy then fades without moving:
+   two moving things would compete.
+   Both keyframes start from opacity 0 and both rely on fill-mode to hold
+   that during the delay. The resting style is therefore the visible one —
+   if these animations ever stop running, the cover must still be there.
+   A test asserts exactly that. */
+@keyframes cover-rise {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cover-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cover__headline {
+  animation: cover-rise 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Delayed by exactly the headline's duration: "after the title finishes",
+   not overlapping it. A test holds the two in that order. */
+.cover__sub,
+.cover__scroll {
+  animation: cover-fade 620ms ease 760ms both;
+}
+
+/* --- Sections --- */
+
+/* Full-bleed, so the tint change is the whole width of the screen as one
+   section slides over the last. The reading column is restored on the
+   children instead. */
+.section {
+  padding: 3rem 2rem 4rem;
+}
+
+.section > * {
+  max-width: 60rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section--placeholder { color: var(--ink-soft); }
+
+.section--placeholder h2 {
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+
+.section--placeholder p { margin: 0; }
+
+/* --- Section 1 --- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.headline {
+  font-size: clamp(1.5rem, 3.4vw, 2.5rem);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  /* Longhand: the shorthand would zero the auto side margins that put a
+     direct child of .section into the reading column. */
+  margin-top: 0;
+  margin-bottom: 3rem;
+  max-width: 28ch;
+}
+
+/* The wash is the RESTING state, not the focused one: these dropdowns sit
+   inside running sentences, and underlined serif text alone did not read
+   as something you could operate. */
+.state-select {
+  font: inherit;
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 0;
+  border-bottom: 2px solid var(--accent);
+  padding: 0 0.1em;
+  cursor: pointer;
+  /* Native select on a serif face needs a nudge to sit on the baseline. */
+  margin: 0 0.05em;
+  /* A native select sizes to its LONGEST option, so "Ohio" sat in a box
+     cut for "District of Columbia". Invisible while the background was
+     transparent; with the wash always on, that dead space is the most
+     visible thing in the sentence. Unsupported in Firefox, where it
+     degrades to exactly the old full-width box. */
+  field-sizing: content;
+}
+
+/* Now that the wash is always on, deepening it cannot carry focus on its
+   own — the two levels measure 1.16:1 against each other, against the 3:1
+   WCAG 1.4.11 asks for. The ring is the indicator; the deeper wash and
+   darker underline are secondary channels. Same ring as the slider thumb,
+   so both controls share one focus language. */
+.state-select:focus-visible {
+  border-bottom-color: var(--accent-dark);
+  background: var(--accent-wash-strong);
+  outline: 2px solid var(--accent-dark);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* State B is the layout ground truth: clusters flow at their natural size
+   and the stage is a wrapping flex container. State A is the same DOM with
+   cluster 0 scaled up and its siblings pulled back to cluster 0's origin,
+   so only transforms change between the two views and layout never moves. */
+.grid-stage {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--dot-gap) * 4);
+  align-content: flex-start;
+  transition: height var(--fan-duration) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.grid-stage .cluster {
+  transition:
+    transform var(--fan-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 320ms ease;
+  /* --stagger is set per render so California's 52 clusters do not take
+     five times longer to fan out than Wyoming's one. */
+  transition-delay: calc(var(--i) * var(--stagger, 10ms));
+  will-change: transform, opacity;
+}
+
+/* Collapsed: cluster 0 scales up in place; every sibling sits beneath it,
+   invisible, ready to fan outward. --dx and --dy are measured once per
+   render and written by app.js. */
+.grid-stage--single .cluster {
+  transform:
+    translate(calc(-1 * var(--dx, 0px)), calc(-1 * var(--dy, 0px)))
+    scale(var(--single-scale));
+  transform-origin: top left;
+}
+
+.grid-stage--single .cluster:not(:first-child) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.grid-stage--expanded .cluster {
+  transform: none;
+  opacity: 1;
+}
+
+/* A rebuild re-measures offsets, which flushes style and would otherwise
+   make every state change animate from wherever the old grid happened to
+   be. Suppressed for one frame while the new grid is placed. */
+.grid-stage.is-measuring,
+.grid-stage.is-measuring .cluster {
+  transition: none !important;
+}
+
+.note {
+  font-size: 0.975rem;
+  color: var(--ink-soft);
+  /* Longhand on purpose: the shorthand would zero the auto side margins
+     that put a direct child of .section into the reading column. */
+  margin-top: 1.5rem;
+  margin-bottom: 0;
+}
+
+@media (max-width: 30rem) {
+  :root {
+    /* Ten columns never changes. The dots shrink instead. */
+    --dot-size: 4px;
+    --dot-gap: 2px;
+    --single-scale: 3.4;
+  }
+}
+
+/* Segmented control. Both views are named, so the reader can see what
+   they would be switching to rather than inferring it from a verb. */
+.viewtoggle {
+  display: inline-flex;
+  margin: 1.25rem 0 2.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.viewtoggle__option {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.4em 1.1em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.viewtoggle__option:hover:not([aria-pressed="true"]):not(:disabled) {
+  background: var(--accent-wash);
+}
+
+.viewtoggle__option[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+/* Fill, not a ring — deeper than hover so the two are distinguishable. */
+.viewtoggle__option:focus-visible {
+  background: var(--accent-wash-strong);
+}
+
+.viewtoggle__option[aria-pressed="true"]:focus-visible {
+  background: var(--accent-dark);
+}
+
+/* A one-representative state has nothing to switch to. The control stays
+   in place rather than disappearing, so the layout does not jump as the
+   reader moves between states. */
+.viewtoggle--disabled {
+  border-color: var(--ink-soft);
+  opacity: 0.4;
+}
+
+.viewtoggle--disabled .viewtoggle__option {
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.viewtoggle--disabled .viewtoggle__option[aria-pressed="true"] {
+  background: var(--ink-soft);
+  color: var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewtoggle__option { transition: none; }
+}
+
+/* Four thousand elements flying outward is exactly what this query is
+   for. Cross-fade instead. */
+@media (prefers-reduced-motion: reduce) {
+  .grid-stage,
+  .grid-stage .cluster {
+    transition: opacity 160ms linear;
+  }
+  .grid-stage .cluster { transition-delay: 0ms; }
+}
+
+/* After the rule it overrides, not before: same specificity is decided by
+   source order. Reduced motion cross-fades the grid in 160ms with no
+   stagger, so the measured fan length no longer applies and the note
+   would otherwise sit waiting for a fan that already finished. */
+@media (prefers-reduced-motion: reduce) {
+  .single-gain--arriving {
+    animation-delay: 160ms;
+    animation-duration: 120ms;
+  }
+}
+
+/* Capacity grids: every dot exists at all times, lit or not, so a value
+   change is a class toggle rather than a re-render. */
+.dot--on { opacity: 1; }
+
+/* Dots arrive and leave rather than appearing and vanishing. The stagger
+   runs on index, so a row fills left to right and empties right to left.
+   Montana 2010 -> 2020 sheds 45 dots at once and is the case this is for:
+   it should read as a load being divided, not as the grid breaking. */
+.timeline-stage .dot {
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 320ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* 3ms x 99 dots = 297ms of stagger, plus 320ms of transition, finishes
+     inside the 700ms playback step. At 6ms the wave ran 914ms and each
+     year was cut off by the next. */
+  transition-delay: calc(var(--i) * 3ms);
+}
+
+.timeline-stage .dot--on {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-stage .dot {
+    transition: none;
+    transition-delay: 0ms;
+  }
+}
+
+/* --- Section 2 --- */
+
+.timeline-stage {
+  display: block;
+  position: relative;
+}
+
+/* Section 1's gain note sits beside the single cluster for the same
+   reason .timeline-gap does: the stage reserves ten rows whatever the
+   state, so anything placed after it in flow reads as a footnote to a
+   void. The offset is the cluster's own width, rebuilt from the tokens
+   the renderer lays out with, so the two cannot drift apart. */
+.single-figure { position: relative; }
+
+.single-gain {
+  position: absolute;
+  top: 0;
+  left: calc(
+    (10 * var(--dot-size) + 9 * var(--dot-gap)) * var(--single-scale) + 2.5rem
+  );
+  margin: 0;
+  max-width: 26ch;
+}
+
+/* Explicit, so the rules above can never outrank the hidden attribute
+   the way a display declaration would. */
+.single-gain[hidden] { display: none; }
+
+/* Coming back from the fanned-out view, every cluster is still flying
+   inward. The sentence holds until they land, then arrives quickly —
+   --gain-delay is written by js/section1.js from the cluster count,
+   because the stagger makes the fan's length depend on the state. */
+@keyframes gain-arrive {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.single-gain--arriving {
+  animation: gain-arrive 220ms ease var(--gain-delay, 600ms) both;
+}
+
+@media (max-width: 40rem) {
+  /* No room beside a 308px cluster — it goes underneath instead. */
+  .single-gain {
+    position: static;
+    margin-top: 1.5rem;
+    max-width: none;
+  }
+}
+
+/* The gap line goes where the dots would be, not under the empty space
+   the stage reserves — otherwise a pre-statehood year reads as a void
+   followed by a footnote. */
+.timeline-figure { position: relative; }
+
+.timeline-gap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  max-width: 28ch;
+}
+
+.timeline-stage .cluster {
+  transform: scale(var(--single-scale));
+  transform-origin: top left;
+}
+
+.player {
+  display: flex;
+  /* Top, not centre: the chevrons and the slider are both --slider-h
+     tall, so aligning their tops puts the chevrons' centres exactly on
+     the bar. Centring instead balances them against the whole track —
+     labels and annotation included — and drops them below it. */
+  align-items: flex-start;
+  gap: 1rem;
+  margin: 1.25rem 0 2.5rem;
+  max-width: 32rem;
+}
+
+/* Only the instance carrying the 1920 annotation reserves room for it.
+   On .player it left Section 4, which has no annotation, with 104px of
+   dead space between its timeline and its dropdowns. */
+#player { margin-bottom: 6.5rem; }
+
+.player__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  flex: none;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.player__step svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.player__step:hover:not(:disabled) { background: var(--accent-wash); }
+
+/* Fill, not a ring — the global rule removes outlines. */
+.player__step:focus-visible {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+/* The end of the span, shown before it is reached rather than as a
+   click that does nothing. */
+.player__step:disabled {
+  color: var(--ink-soft);
+  border-color: var(--ink-soft);
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.player__track {
+  flex: 1;
+  position: relative;
+}
+
+/* --thumb: approximate width of a native range thumb. The real one is not
+   exposed to CSS, and the thumb travels between its own half-widths, so
+   the mark lands within a pixel or two rather than exactly.
+   --slider-h must match the slider's height: the mark hangs from the
+   middle of the slider so its line meets the track rather than floating
+   below it. */
+.player__track {
+  --thumb: 16px;
+  --slider-h: 44px;
+}
+
+.player__mark {
+  position: absolute;
+  top: calc(var(--slider-h) / 2);
+  width: 0;
+}
+
+/* A curved leader rather than a vertical rule: it starts below the track
+   so it never crosses the slider, then bends across to meet the note. The
+   top of the curve still points at the 1920 stop. */
+.player__mark-line {
+  position: absolute;
+  top: 0.9rem;
+  left: 0;
+  width: 3rem;
+  height: 3.5rem;
+  overflow: visible;
+}
+
+.player__mark-line path {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  opacity: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Offset to clear where the curve lands rather than sitting under it. */
+.player__mark-note {
+  position: absolute;
+  top: 3.9rem;
+  left: 2.9rem;
+  width: 15rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+/* Narrow screens: the note hangs from a point ~9% along the track, so a
+   fixed width runs off the right edge and scrolls the whole page
+   sideways. Pulled back toward the track's start instead.
+   Placed after the base rule deliberately — same specificity, so source
+   order is what decides. */
+@media (max-width: 40rem) {
+  .player__mark-note {
+    left: -2.5rem;
+    top: 4.3rem;
+    width: 13rem;
+  }
+}
+
+/* Attribute, not id: the year picker is a component and the page holds
+   two of them. Scoped to the first instance's id, the second instance
+   rendered as a browser-default blue stub. */
+[data-yearpicker="slider"] {
+  width: 100%;
+  height: var(--slider-h);
+  accent-color: var(--accent);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* A hue nudge alone is about 1.45:1 between focused and unfocused, well
+   under the 3:1 WCAG 1.4.11 asks for. A wash over the whole track used to
+   carry the difference, but it bloomed a soft blob around the control.
+   The indicator is a crisp ring on the thumb instead: --accent-dark on
+   --paper measures about 9:1, so one channel is enough and the track
+   stays clean. Do not put the fill back without replacing the ring. */
+[data-yearpicker="slider"]:focus-visible {
+  accent-color: var(--accent-dark);
+}
+
+/* Paper first, then the dark ring: the gap keeps the ring legible where
+   the thumb sits over the filled part of its own track. */
+[data-yearpicker="slider"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent-dark);
+}
+
+[data-yearpicker="slider"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent-dark);
+}
+
+.player__ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 30rem) {
+  .player { gap: 0.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player__step { transition: none; }
+}
+
+/* --- Section 4: two states side by side --- */
+
+:root {
+  /* Two grids where Sections 1 and 2 have one, so a smaller scale. */
+  --compare-scale: 2.6;
+}
+
+/* The tab strip. Pills in the .viewtoggle idiom, but a wrapping row of
+   four labelled choices rather than a two-option toggle, so they are
+   separate pills instead of one segmented control. */
+.comparetabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.comparetabs__tab {
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.comparetabs__tab:hover[aria-selected="false"] {
+  background: var(--accent-wash);
+}
+
+.comparetabs__tab[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+/* Its own fill, because :focus-visible { outline: none } is global and a
+   control without one is invisible to a keyboard. The ring is the same
+   one the dropdowns and the slider thumb use. */
+.comparetabs__tab:focus-visible {
+  outline: 2px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comparetabs__tab { transition: none; }
+}
+
+/* On a preset the column names itself; the year is not decoration, since
+   the Montana tab draws the same state in both columns. */
+.compare__head {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 0.15rem;
+}
+
+/* The same slot as .compare__head, holding controls instead of a label.
+   Only one of the two is ever shown. */
+.compare__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: baseline;
+  margin-top: 0;
+  margin-bottom: 0.15rem;
+}
+
+/* .state-select already supplies the resting wash and the focus ring;
+   only the sizing is the column's business. The year needs no more room
+   than four digits, so the state takes the slack. */
+.compare__controls .state-select { font-size: 1rem; }
+.compare__controls #compare-state-a,
+.compare__controls #compare-state-b { flex: 1 1 auto; min-width: 0; }
+
+.compare__head[hidden],
+.compare__controls[hidden] { display: none; }
+
+/* Scoped to this section: the headline here is a caption for the two
+   columns under it, not an opening statement with room to breathe like
+   Sections 1 and 2. */
+#section-4 .headline {
+  margin-bottom: 0.5rem;
+  /* js/section4.js pads this down so the sentence hangs at the bottom of
+     a row sized to the tallest heading. Without box-sizing the padding
+     would add to the height instead of being absorbed by it. */
+  box-sizing: border-box;
+}
+
+/* Out of flow on Custom, not merely emptied — an empty .headline still
+   carries its bottom margin and its reserved row, which left a screen of
+   nothing above controls that need no argument. The panel jumps on this
+   one tab, which is the accepted cost. */
+#compare-headline[hidden] { display: none; }
+
+.compare {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-top: 1.5rem;
+}
+
+/* Never stacks: side by side is the whole point of the section, so the
+   dots shrink instead. */
+.compare__side {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.compare__label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+
+.compare__figure { position: relative; }
+
+.compare__gap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  max-width: 14ch;
+}
+
+/* The figure line labels the dots below it, so it needs air under it as
+   well as over it — flush against the grid it read as the grid's first
+   row. .note zeroes margin-bottom, which was right when this sat under
+   the dots and wrong the moment it moved above them. */
+.compare__count {
+  margin-top: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.compare .timeline-stage .cluster {
+  transform: scale(var(--compare-scale));
+  transform-origin: top left;
+}
+
+@media (max-width: 30rem) {
+  :root { --compare-scale: 1.7; }
+  .compare { gap: 1rem; }
+}
+
+/* --- Cover lead-in and section transitions --- */
+
+.cover__lead {
+  display: block;
+  margin-top: 0.9rem;
+  color: var(--ink);
+}
+
+.section__lead {
+  font-size: 0.975rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  /* Longhand, for the same reason as .headline above. */
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+/* --- The divider ---
+   Not a figure: no dots, no controls, no stage. It carries the mechanism
+   the sections on either side demonstrate, so it is set as something to
+   read rather than something to operate.
+   Plain block flow, deliberately. It was centred in its screen, which
+   both dropped it 217px below where every other section opens and —
+   because .section > * carries margin-left/right: auto, and in flex
+   layout an auto cross-axis margin beats align-items: stretch — shrank
+   it to its content and centred it horizontally too, 209px off the
+   shared column. Block flow gives both alignments for free. */
+
+/* Carries .headline as well, so it is set at exactly the size every
+   other section's sentence is — it does the same job. Only the measure
+   differs: this one has no dropdown in it and no grid under it, so it
+   can run a little wider than .headline's 28ch.
+   Longhand margins: .divider__inner is a direct child of .section and
+   the shorthand would zero the auto side margins that put it in the
+   reading column. */
+.divider__lead {
+  max-width: 34ch;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* --- Closing --- */
+
+/* The closing and the fixed key are a pair at the foot of the page, so
+   they share a vertical rhythm: the same bottom padding as the pill, and
+   .closing-footer holds them the same distance off the page foot as the
+   pill sits off the viewport. Equal padding over an equal edge puts the
+   closing's LAST line and the pill's single line the same distance up
+   from that edge — baseline alignment, with nothing measured.
+   Change .key's bottom or padding and these follow; a test holds them
+   together. */
+.section--closing {
+  padding-top: 4rem;
+  padding-bottom: 0.6rem;
+}
+
+.closing {
+  font-size: clamp(1.3rem, 2.6vw, 2rem);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  max-width: 24ch;
+  margin: 0 0 2rem;
+}
+
+/* Reserve the pill's lane rather than narrowing the box. The closing
+   shares a band with the fixed key now, and at full width its first line
+   reached within 2px of the pill at 1280 and ran under it at others.
+   A max-width cannot do this: .section > * carries auto side margins, so
+   a narrower box is CENTRED in the column and its right edge moves
+   further right, not less. Padding shortens the line and leaves the left
+   edge where every other section's copy starts.
+   Both the column's right edge and the pill track the viewport's right,
+   so one reserve holds at every desktop width. */
+@media (min-width: 48rem) {
+  .section--closing .note { padding-right: 13rem; }
+}
+
+.section--closing a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.section--closing a:focus-visible {
+  background: var(--accent-wash);
+}
+
+/* --- Pinned headlines --- */
+
+/* The sentence and the controls stay put while the dots scroll past, so a
+   reader can step the year while the thing it changes is still on screen.
+   Pinning whole sections was the alternative, but these sections run
+   700-900px and would have to be cut down to fit a viewport. */
+/* Kept as a grouping element only. Pinning the headline inside a section
+   was the previous design; whole sections stack now. */
+.section__pinned { padding-bottom: 0.75rem; }
+
+/* Each section pins once its BOTTOM reaches the bottom of the viewport,
+   and the next slides up over it.
+   top: calc(100vh - 100%) is what makes that work for sections sized to
+   their content: the percentage resolves against .stack__item, whose
+   height is the section's own, so a section taller than the viewport
+   gets a negative offset and settles bottom-aligned instead of pinning
+   its top and hiding its own tail. No z-index: both are positioned with
+   auto, so source order already paints each over the last. */
+/* Gated on viewport size: while pinned, a section taller than the screen
+   would have its lower half covered by the next card before the reader
+   could reach it. Below this, sections simply scroll. */
+/* The gate must exceed the TALLEST section, measured at 813px. In a
+   stacking layout the incoming card covers the outgoing one from the
+   bottom up, so a section taller than the viewport always has its tail
+   covered before a reader reaches it — and bottom-pinning makes that
+   worse, not better, because then the tail is covered first. There is no
+   CSS arrangement that rescues it: the effect only works when a section
+   fits. 52rem is 832px; below that, sections simply scroll.
+   If the effect is wanted on shorter laptops, the sections have to get
+   shorter — that is a design decision, not a CSS one. */
+@media (min-width: 48rem) and (min-height: 52rem) {
+  .section {
+    position: sticky;
+    top: 0;
+  }
+}
+
+/* One idea, one screen. Floored rather than fixed, so a section whose
+   content outgrows the viewport still shows all of it by scrolling —
+   the floor lifts short sections, it never crops tall ones.
+   Width-gated only: below 48rem the sections stack at their natural
+   height and nothing pins, which is the mobile behaviour.
+   The closing is excluded deliberately — it is one sentence and a source
+   link, and a full screen of it is a full screen of nothing. */
+@media (min-width: 48rem) {
+  .section:not(.section--closing) { min-height: 100vh; }
+}
+
+/* Opaque, and stepped so the overlap is legible as it happens. */
+#section-1 { background: #fbfaf7; }
+#section-2 { background: #f7f5f0; }
+#section-3 { background: #f3f0e8; }
+#section-4 { background: #efebe1; }
+#section-5 { background: #ece7db; }
+
+/* The closing lives outside <main>, which is the sticky sections'
+   containing block. Inside it, the pinned sections stayed over it — and
+   because it is unpositioned it painted *beneath* them, so what showed at
+   the foot of the page was a pinned section's lighter tint, not the
+   closing at all. Out here the stack releases before it. */
+.closing-footer {
+  background: #ece7db;
+  padding-bottom: 1.5rem;
+}
+
+@media (max-width: 30rem) {
+  /* No shared band down here: the closing runs the full width, so the
+     pill would sit ON the last line rather than beside it. Clear it
+     instead — the pill is about 36px tall and sits 0.75rem up, so the
+     copy stops above that and the two stack, which is what was asked
+     for on small screens. */
+  .section--closing { padding-bottom: 3.5rem; }
+  .closing-footer { padding-bottom: 0.75rem; }
+}
+
+#section-5 { position: static; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sections sliding over each other is motion a reader asked not to see. */
+  .section { position: static; }
+
+  /* The cover's entrance likewise. Removing the animation leaves the
+     resting style, which is the finished one — nothing stays hidden. */
+  .cover__headline,
+  .cover__sub,
+  .cover__scroll { animation: none; }
+}

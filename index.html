@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Dot Is 10,000 People — Congressional Apportionment</title>
+<meta name="description" content="How many people does a single member of the U.S. House of Representatives speak for? Census apportionment data, 1910 to 2020.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="cover">
+  <div class="cover__inner">
+    <h1 class="cover__headline">435 seats.<br>331 million people.</h1>
+    <p class="cover__sub">
+      The House of Representatives has had 435 seats since 1920, when the
+      country held 106 million people. It holds 331 million now.
+      <span class="cover__lead">Let's explore how representation has changed in the last 100+ years.</span>
+      <span class="visually-hidden">Throughout, one dot stands for 10,000 people.</span>
+    </p>
+  </div>
+  <p class="cover__scroll" aria-hidden="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <polyline points="6 9 12 16 18 9"></polyline>
+    </svg>
+  </p>
+</header>
+
+<main>
+  <section class="section" id="section-1" aria-labelledby="section-1-heading">
+    <h2 class="visually-hidden" id="section-1-heading">One representative</h2>
+    <div class="section__pinned">
+
+
+    <p class="headline" id="headline">
+      Today,
+      <label class="visually-hidden" for="state-select">Choose a state</label>
+      <select id="state-select" class="state-select"></select>
+      <span id="headline-rest"></span>
+    </p>
+
+    <div class="viewtoggle" id="view-toggle" role="group" aria-label="Grid view"></div>
+    </div>
+
+<div class="single-figure">
+      <div class="grid-stage grid-stage--single" id="grid-stage"></div>
+      <p class="note single-gain" id="single-gain"></p>
+    </div>
+
+    <!-- Changing the select rewrites the headline below the control
+         rather than at it, so the change needs announcing. -->
+    <p class="visually-hidden" id="live-region" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="section" id="section-2" aria-labelledby="section-2-heading">
+    <h2 class="visually-hidden" id="section-2-heading">Change over time</h2>
+    <div class="section__pinned">
+
+
+    <p class="headline" id="timeline-headline"><span id="timeline-before"></span><label class="visually-hidden" for="timeline-state">Choose a state for the timeline</label><select id="timeline-state" class="state-select"></select><span id="timeline-rest"></span></p>
+
+    <div class="player" id="player">
+      <button type="button" class="player__step" id="year-prev" data-yearpicker="prev" aria-label="Previous census">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <polyline points="15 5 8 12 15 19"></polyline>
+        </svg>
+      </button>
+      <div class="player__track">
+        <label class="visually-hidden" for="year-slider">Census year</label>
+        <!-- value is the index of the store's opening year (1920), not a
+             year. YearPicker corrects it on first render; the literal is
+             what shows until then. -->
+        <input type="range" id="year-slider" data-yearpicker="slider" min="0" max="11" step="1" value="1">
+        <div class="player__ends" aria-hidden="true"><span>1910</span><span>2020</span></div>
+        <div class="player__mark" id="year-mark">
+          <svg class="player__mark-line" viewBox="0 0 48 56" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+            <path d="M1 0 C1 30, 1 38, 34 44" />
+          </svg>
+          <span class="player__mark-note"></span>
+        </div>
+      </div>
+      <button type="button" class="player__step" id="year-next" data-yearpicker="next" aria-label="Next census">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <polyline points="9 5 16 12 9 19"></polyline>
+        </svg>
+      </button>
+    </div>
+    </div>
+
+<div class="timeline-figure">
+      <div class="grid-stage timeline-stage" id="timeline-stage"></div>
+      <p class="note timeline-gap" id="timeline-gap"></p>
+    </div>
+
+    <p class="visually-hidden" id="timeline-live" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="section section--divider" id="section-3" aria-labelledby="section-3-heading">
+    <h2 class="visually-hidden" id="section-3-heading">Why the gap widens</h2>
+
+    <div class="divider__inner">
+      <p class="headline divider__lead">
+        Since the total number of House seats was fixed in <strong>1920</strong>,
+        representation has grown uneven. The widest gaps are between states of
+        nearly the same size.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="section-4" aria-labelledby="section-4-heading">
+    <h2 class="visually-hidden" id="section-4-heading">Compare two states</h2>
+    <div class="section__pinned">
+      <p class="section__lead" id="compare-lead">Where the gap is widest</p>
+      <div class="comparetabs" id="compare-tabs"></div>
+      <p class="headline" id="compare-headline"></p>
+    </div>
+
+    <div class="compare" id="compare-panel">
+      <div class="compare__side">
+        <p class="compare__head" id="compare-head-a"></p>
+        <p class="compare__controls" id="compare-controls-a" hidden>
+          <label class="visually-hidden" for="compare-state-a">First state</label>
+          <select id="compare-state-a" class="state-select"></select>
+          <label class="visually-hidden" for="compare-year-a">First year</label>
+          <select id="compare-year-a" class="state-select"></select>
+        </p>
+        <p class="note compare__count" id="compare-count-a"></p>
+        <div class="compare__figure">
+          <div class="grid-stage timeline-stage" id="compare-grid-a"></div>
+          <p class="note compare__gap" id="compare-gap-a"></p>
+        </div>
+      </div>
+
+      <div class="compare__side">
+        <p class="compare__head" id="compare-head-b"></p>
+        <p class="compare__controls" id="compare-controls-b" hidden>
+          <label class="visually-hidden" for="compare-state-b">Second state</label>
+          <select id="compare-state-b" class="state-select"></select>
+          <label class="visually-hidden" for="compare-year-b">Second year</label>
+          <select id="compare-year-b" class="state-select"></select>
+        </p>
+        <p class="note compare__count" id="compare-count-b"></p>
+        <div class="compare__figure">
+          <div class="grid-stage timeline-stage" id="compare-grid-b"></div>
+          <p class="note compare__gap" id="compare-gap-b"></p>
+        </div>
+      </div>
+    </div>
+
+    <p class="visually-hidden" id="compare-live" role="status" aria-live="polite"></p>
+  </section>
+
+</main>
+
+<footer class="closing-footer">
+  <section class="section section--closing" id="section-5" aria-labelledby="section-5-heading">
+    <h2 class="visually-hidden" id="section-5-heading">Closing</h2>
+
+    <p class="note">
+      Data: <a href="https://www.census.gov/data/tables/time-series/dec/apportionment-data-text.html">U.S.
+      Census Bureau, Congressional Apportionment</a>. Figures for people per
+      representative use apportionment population, which differs slightly
+      from resident population.
+    </p>
+  </section>
+</footer>
+
+<!-- Fixed, because the unit is the contract every section depends on and
+     the reader needs it wherever they are, not only on the cover. -->
+<aside class="key" id="key" aria-label="Scale">
+  <div class="key__swatch" id="key-swatch" aria-hidden="true"></div>
+  <p class="key__label">= 10,000 people</p>
+</aside>
+
+<script src="js/data.js"></script>
+<script src="js/dotgrid.js"></script>
+<script src="js/format.js"></script>
+<script src="js/records.js"></script>
+<script src="js/store.js"></script>
+<script src="js/yearpicker.js"></script>
+<script src="js/section1.js"></script>
+<script src="js/section2.js"></script>
+<script src="js/comparetabs.js"></script>
+<script src="js/section4.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
